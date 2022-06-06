@@ -1,2 +1,1 @@
 recursive-include ./aruco_estimator *
-recursive-exclude ./aruco_estimator/data/images *.JPG

@@ -1,11 +1,16 @@
-![](img/header.png)
+![](https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/header.png)
 
 # Aruco Scale Factor Estimation for COLMAP (Work in Progress!)
 
-![PyPI](https://img.shields.io/pypi/v/aruco-estimator)
+<a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aruco-estimator"></a> 
+<a href="https://pepy.tech/project/aruco-estimator"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/aruco-estimator?label=PyPi%20downloads"></a> 
+<a href="https://github.com/meyerls/aruco-estimator/actions"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/meyerls/aruco-estimator/Publish%20Python%20%F0%9F%90%8D%20distributions%20%F0%9F%93%A6%20to%20PyPI%20and%20TestPyPI"></a> 
+<a href="https://github.com/meyerls/aruco-estimator/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/github/license/meyerls/aruco-estimator"></a> 
+
+<!--![PyPI](https://img.shields.io/pypi/v/aruco-estimator)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/aruco-estimator?label=PyPi%20downloads)
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/meyerls/aruco-estimator/Publish%20Python%20%F0%9F%90%8D%20distributions%20%F0%9F%93%A6%20to%20PyPI%20and%20TestPyPI)
-![GitHub](https://img.shields.io/github/license/meyerls/aruco-estimator)
+![GitHub](https://img.shields.io/github/license/meyerls/aruco-estimator)-->
 
 ## About
 
@@ -106,7 +111,7 @@ aruco_scale_factor.visualization(frustum_scale=0.2)
 The visualization is suitable for displaying the scene, the camera frustums, and the casted rays. It is usefull to check
 whether the corners of the aruco marker are detected and positioned correctly.
 
-![](img/visualization.png)
+![](https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/visualization.png)
 
 ## Limitation/Improvements
 
