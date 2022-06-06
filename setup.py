@@ -21,7 +21,7 @@ with open("README.md", 'r') as f:
 
 setuptools.setup(
     name='aruco_estimator',
-    version='1.0.0',
+    version='1.0.1',
     description='Aruco Scale Factor Estimation',
     license="MIT",
     long_description=long_description,
@@ -36,7 +36,9 @@ setuptools.setup(
                       "opencv-python",
                       "opencv-contrib-python",
                       "pyquaternion",
-                      "tqdm"],  # external packages as dependencies
+                      "tqdm",
+                      "urllib",
+                      "wget"],  # external packages as dependencies
     classifiers=[
         "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: MIT License",
