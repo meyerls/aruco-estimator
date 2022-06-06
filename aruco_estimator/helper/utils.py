@@ -239,6 +239,7 @@ def convert_colmap_extrinsics_scaled(frame, scale_factor):
 
     return Rwc, twc, M
 
+
 # ToDo: Image reader
 
 class Image(BaseImage):

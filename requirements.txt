@@ -5,3 +5,4 @@ opencv-contrib-python
 pyquaternion
 matplotlib
 tqdm
+wget

@@ -83,9 +83,13 @@ python scale_estimation.py --colmap_project ./data
 
 ````python
 from aruco_estimator import ArucoScaleFactor
+from aruco_estimator.helper import download
+
+# Download example dataset. Door dataset is roughly 200 MB
+dataset_path = download.download_door_dataset()
 
 # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
-aruco_scale_factor = ArucoScaleFactor(project_path='aruco_estimator/data')
+aruco_scale_factor = ArucoScaleFactor(project_path=dataset_path)
 aruco_distance = aruco_scale_factor.run()
 print('Mean distance between aruco markers: ', aruco_distance)
 
@@ -102,7 +106,7 @@ aruco_scale_factor.visualization(frustum_scale=0.2)
 The visualization is suitable for displaying the scene, the camera frustums, and the casted rays. It is usefull to check
 whether the corners of the aruco marker are detected and positioned correctly.
 
-![](img/img1.png)
+![](img/visualization.png)
 
 ## Limitation/Improvements
 
@@ -114,8 +118,9 @@ whether the corners of the aruco marker are detected and positioned correctly.
 - [ ] Scale poses of camera/extrinsics.
 - [x] Make package for PyPi
 - [x] Upload to PyPi during CI
+- [ ] Make multiple datasets available for download (small/medium/large)
 - [ ] Install CLI Tool vi PyPi
-- [ ] Put aruco marker detection in threads
+- [x] Put aruco marker detection in threads
 
 ## Acknowledgement
 
