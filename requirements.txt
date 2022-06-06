@@ -1,0 +1,7 @@
+numpy
+open3d
+opencv-python
+opencv-contrib-python
+pyquaternion
+matplotlib
+tqdm
