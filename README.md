@@ -4,7 +4,7 @@
 
 ![PyPI](https://img.shields.io/pypi/v/aruco-estimator)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/aruco-estimator?label=PyPi%20downloads)
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/meyerls/scale_factor_estimation/Publish%20Python%20%F0%9F%90%8D%20distributions%20%F0%9F%93%A6%20to%20PyPI%20and%20TestPyPI)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/meyerls/aruco-estimator/Publish%20Python%20%F0%9F%90%8D%20distributions%20%F0%9F%93%A6%20to%20PyPI%20and%20TestPyPI)
 ![GitHub](https://img.shields.io/github/license/meyerls/scale_factor_estimation)
 
 ## About
