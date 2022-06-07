@@ -21,14 +21,14 @@ with open("README.md", 'r') as f:
 
 setuptools.setup(
     name='aruco_estimator',
-    version='1.0.2',
+    version='1.0.3',
     description='Aruco Scale Factor Estimation',
     license="MIT",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author='Lukas Meyer',
     author_email='lukas.meyer@fau.de',
-    url="https://github.com/luigipacino/aruco-estimator",
+    url="https://github.com/meyerls/aruco-estimator",
     packages=setuptools.find_packages(),
     install_requires=["numpy",
                       "matplotlib",
@@ -37,7 +37,6 @@ setuptools.setup(
                       "opencv-contrib-python",
                       "pyquaternion",
                       "tqdm",
-                      "urllib",
                       "wget"],  # external packages as dependencies
     classifiers=[
         "Programming Language :: Python :: 3.7",
