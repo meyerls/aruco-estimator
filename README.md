@@ -55,7 +55,7 @@ least-squares method [2].-->
 
 ## Installation
 
-This repository is tested on Python 3.9+ and can be installed from [PyPi](https://pypi.org/project/aruco-estimator)
+This repository is tested on Python 3.7+ and can be installed from [PyPi](https://pypi.org/project/aruco-estimator)
 <!-- Tutorial: https://www.youtube.com/watch?v=JkeNVaiUq_c -->
 
 ````angular2html
