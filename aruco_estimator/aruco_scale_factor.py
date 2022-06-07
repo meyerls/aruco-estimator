@@ -32,7 +32,7 @@ except ImportError:
     from .helper.opt import *
     from .base import *
 
-DEBUG = True
+DEBUG = False
 
 
 class ScaleFactorBase:

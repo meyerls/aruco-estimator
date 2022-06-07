@@ -91,18 +91,19 @@ from aruco_estimator import ArucoScaleFactor
 from aruco_estimator.helper import download
 
 # Download example dataset. Door dataset is roughly 200 MB
-dataset_path = download.download_door_dataset()
+dataset = download.Dataset()
+dataset.download_door_dataset()
 
 # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
-aruco_scale_factor = ArucoScaleFactor(project_path=dataset_path)
+aruco_scale_factor = ArucoScaleFactor(project_path=dataset.dataset_path)
 aruco_distance = aruco_scale_factor.run()
 print('Mean distance between aruco markers: ', aruco_distance)
 
 # Calculate scaling factor and apply to scene
-dense, scale_factor = aruco_scale_factor.apply(true_scale=15)  # radius in cm
+dense, scale_factor = aruco_scale_factor.apply(true_scale=dataset.scale)  # scale in cm
 print('Point cloud and poses are scaled by: ', scale_factor)
 
-# Visualization of the scene and rays BEFOR scaling. This miht be necessary for debugging
+# Visualization of the scene and rays BEFORE scaling. This might be necessary for debugging
 aruco_scale_factor.visualization(frustum_scale=0.2)
 ````
 
