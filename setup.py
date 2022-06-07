@@ -37,7 +37,6 @@ setuptools.setup(
                       "opencv-contrib-python",
                       "pyquaternion",
                       "tqdm",
-                      "urllib",
                       "wget"],  # external packages as dependencies
     classifiers=[
         "Programming Language :: Python :: 3.7",
