@@ -28,7 +28,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     author='Lukas Meyer',
     author_email='lukas.meyer@fau.de',
-    url="https://github.com/luigipacino/aruco-estimator",
+    url="https://github.com/meyerls/aruco-estimator",
     packages=setuptools.find_packages(),
     install_requires=["numpy",
                       "matplotlib",
