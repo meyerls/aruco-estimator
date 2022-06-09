@@ -8,6 +8,7 @@ See LICENSE file for more information.
 
 # Built-in/Generic Imports
 from functools import wraps
+from functools import partial
 import time
 import os
 
@@ -133,6 +134,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         self.sparse_scaled = None
 
         # Multi Processing
+        self.progress_bar = True
         self.num_processes = os.cpu_count()
         self.image_names = []
         # Prepare parsed data for multi processing
@@ -256,7 +258,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         viewer.run()
         viewer.destroy_window()
 
-    def visualization(self, frustum_scale: float = 1, point_size: float = 1.,sphere_size:float=0.02):
+    def visualization(self, frustum_scale: float = 1, point_size: float = 1., sphere_size: float = 0.02):
         """
 
         :param frustum_scale:
@@ -333,10 +335,9 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         :return:
         """
-        from functools import partial
-
         with Pool(self.num_processes) as p:
-            result = p.map(partial(detect_aruco_marker, dict_type=self.aruco_dict_type), self.image_names)
+            result = list(tqdm(p.imap(partial(detect_aruco_marker, dict_type=self.aruco_dict_type), self.image_names),
+                               total=len(self.image_names), disable=not self.progress_bar))
 
         if len(result) != len(self.images):
             raise ValueError("Thread return has not the same length as the input parameters!")

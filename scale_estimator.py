@@ -19,7 +19,7 @@ from aruco_estimator import ArucoScaleFactor
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Estimate scale factor for COLMAP projects with aruco markers.')
-    parser.add_argument('--colmap_project', type=str, help='Path to COLMAP project', default= './aruco_estimator/data/door') # ../2022_06_02/01 //  './aruco_estimator/data/'
+    parser.add_argument('--colmap_project', type=str, help='Path to COLMAP project', default= './aruco_estimator/data/tree') # ../2022_06_02/01 //  './aruco_estimator/data/'
     parser.add_argument('--aruco_size', type=float, help='Size of the aruco marker in cm.', default=15)
     parser.add_argument('--visualize', type=bool, help='Flag to enable visualization', default=True)
     args = parser.parse_args()
