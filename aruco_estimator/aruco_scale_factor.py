@@ -8,6 +8,7 @@ See LICENSE file for more information.
 
 # Built-in/Generic Imports
 from functools import wraps
+from functools import partial
 import time
 import os
 
@@ -61,7 +62,7 @@ class ScaleFactorBase:
         """
         pass
 
-    def detect(self):
+    def __detect(self):
         return NotImplemented
 
     def run(self):
@@ -89,7 +90,7 @@ def timeit(func):
 
 
 class ArucoScaleFactor(ScaleFactorBase, COLMAP):
-    def __init__(self, project_path: str, dense_pc: str = 'fused.ply'):
+    def __init__(self, project_path: str, dense_path: str = 'fused.ply'):
         """
         This class is used to determine 3D points of the aruco marker, which are used to compute a scaling factor.
         In the following the workflow is shortly described.
@@ -116,7 +117,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         :param project_path:
         :param dense_pc:
         """
-        COLMAP.__init__(self, project_path=project_path, dense_pc=dense_pc)
+        COLMAP.__init__(self, project_path=project_path, dense_pc=dense_path)
 
         # Values to calculate 3D point of intersection
         self.P0 = np.array([])
@@ -133,6 +134,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         self.sparse_scaled = None
 
         # Multi Processing
+        self.progress_bar = True
         self.num_processes = os.cpu_count()
         self.image_names = []
         # Prepare parsed data for multi processing
@@ -256,7 +258,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         viewer.run()
         viewer.destroy_window()
 
-    def visualization(self, frustum_scale: float = 1, point_size: float = 1.,sphere_size:float=0.02):
+    def visualization(self, frustum_scale: float = 1, point_size: float = 1., sphere_size: float = 0.02):
         """
 
         :param frustum_scale:
@@ -325,7 +327,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         viewer.destroy_window()
 
     @timeit
-    def detect(self):
+    def __detect(self):
         """
         Detects the aruco corners in the image and extracts the aruco id. Aftwards the image, id and tuple of corners
         are saved into the Image class to parse the data through the algorithm. If no aruco marker is detected it
@@ -333,10 +335,9 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         :return:
         """
-        from functools import partial
-
         with Pool(self.num_processes) as p:
-            result = p.map(partial(detect_aruco_marker, dict_type=self.aruco_dict_type), self.image_names)
+            result = list(tqdm(p.imap(partial(detect_aruco_marker, dict_type=self.aruco_dict_type), self.image_names),
+                               total=len(self.image_names), disable=not self.progress_bar))
 
         if len(result) != len(self.images):
             raise ValueError("Thread return has not the same length as the input parameters!")
@@ -353,11 +354,11 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         :return:
         """
-        self.detect()
+        self.__detect()
         self.__ray_cast()
         self.aruco_corners_3d = intersect_parallelized(P0=self.P0.reshape(len(self.P0) // 3, 3),
                                                        N=self.N.reshape(len(self.N) // 12, 4, 3))
-        self.aruco_distance = self.evaluate()
+        self.aruco_distance = self.__evaluate(self.aruco_corners_3d)
 
         return self.aruco_distance
 
@@ -384,6 +385,11 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
     @staticmethod
     def __evaluate(aruco_corners_3d: np.ndarray) -> np.ndarray:
+        """
+        Calculates the L2 norm between every neighbouring aruco corner. Finally the distances are averaged and returned
+
+        :return:
+        """
         dist1 = np.linalg.norm(aruco_corners_3d[0] - aruco_corners_3d[1])
         dist2 = np.linalg.norm(aruco_corners_3d[1] - aruco_corners_3d[2])
         dist3 = np.linalg.norm(aruco_corners_3d[2] - aruco_corners_3d[3])
@@ -391,17 +397,6 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         # Average
         return np.mean([dist1, dist2, dist3, dist4])
-
-    def evaluate(self) -> np.ndarray:
-        """
-        Calculates the L2 norm between every neighbouring aruco corner. Finally the distances are averaged and returned
-
-        :return:
-        """
-        # Average
-        self.aruco_distance = self.__evaluate(self.aruco_corners_3d)
-
-        return self.aruco_distance
 
     def apply(self, true_scale: float) -> o3d.cpu.pybind.geometry.PointCloud:
         """
