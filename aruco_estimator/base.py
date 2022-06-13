@@ -6,6 +6,7 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
+
 # Built-in/Generic Imports
 # ...
 
@@ -16,9 +17,7 @@ See LICENSE file for more information.
 # ...
 
 
-
-
-class ScaleFactorBase:
+class ScaleFactorBase(object):
     def __init__(self):
         """
         Base class for scale factor estimation.
@@ -44,15 +43,14 @@ class ScaleFactorBase:
         """
         pass
 
-    def detect(self):
+    def __evaluate(self):
+        return NotImplemented
+
+    def __detect(self):
         return NotImplemented
 
     def run(self):
         return NotImplemented
 
-    def evaluate(self):
-        return NotImplemented
-
     def apply(self, *args, **kwargs):
         return NotImplemented
-
