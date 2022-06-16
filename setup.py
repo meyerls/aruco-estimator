@@ -23,14 +23,14 @@ setuptools.setup(
     author_email='lukas.meyer@fau.de',
     url="https://github.com/meyerls/aruco-estimator",
     packages=setuptools.find_packages(),
-    install_requires=["numpy==1.22.4",
-                      "matplotlib==3.5.2",
-                      "open3d==0.15.2",
-                      "opencv-python==4.6.0.66",
-                      "opencv-contrib-python==4.6.0.66",
-                      "pyquaternion==0.9.9",
-                      "tqdm==4.64.0",
-                      "wget==3.2"],  # external packages as dependencies
+    install_requires=["numpy",
+                      "matplotlib",
+                      "open3d",
+                      "opencv-python",
+                      "opencv-contrib-python",
+                      "pyquaternion",
+                      "tqdm",
+                      "wget"],  # external packages as dependencies
     classifiers=[
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
