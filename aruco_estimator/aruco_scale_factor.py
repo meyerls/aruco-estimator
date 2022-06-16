@@ -135,7 +135,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         # Multi Processing
         self.progress_bar = True
-        self.num_processes = os.cpu_count()
+        self.num_processes = 6  # 12 if os.cpu_count() > 12 else os.cpu_count()
         self.image_names = []
         # Prepare parsed data for multi processing
         for image_idx in self.images.keys():
@@ -336,7 +336,9 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         :return:
         """
         with Pool(self.num_processes) as p:
-            result = list(tqdm(p.imap(partial(detect_aruco_marker, dict_type=self.aruco_dict_type), self.image_names),
+            result = list(tqdm(p.imap(
+                partial(detect_aruco_marker, dict_type=self.aruco_dict_type),
+                self.image_names),
                                total=len(self.image_names), disable=not self.progress_bar))
 
         if len(result) != len(self.images):
@@ -398,7 +400,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         # Average
         return np.mean([dist1, dist2, dist3, dist4])
 
-    def apply(self, true_scale: float) -> o3d.cpu.pybind.geometry.PointCloud:
+    def apply(self, true_scale: float) -> o3d.pybind.geometry.PointCloud:
         """
         This function can be used if the scaling of the dense point cloud should be applied directly + the extrinsic
         paramters should be scaled.

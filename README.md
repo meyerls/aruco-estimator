@@ -2,10 +2,10 @@
 
 # Aruco Scale Factor Estimation for COLMAP (Work in Progress!)
 
-<a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/aruco-estimator"></a> 
-<a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aruco-estimator"></a> 
-<a href="https://github.com/meyerls/aruco-estimator/actions"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/meyerls/aruco-estimator/Python%20package"></a> 
-<a href="https://github.com/meyerls/aruco-estimator/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/github/license/meyerls/aruco-estimator"></a> 
+<a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/aruco-estimator"></a>
+<a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aruco-estimator"></a>
+<a href="https://github.com/meyerls/aruco-estimator/actions"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/meyerls/aruco-estimator/Python%20package"></a>
+<a href="https://github.com/meyerls/aruco-estimator/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/github/license/meyerls/aruco-estimator"></a>
 <!--a href="https://pepy.tech/project/aruco-estimator"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/aruco-estimator?label=PyPi%20downloads"></a--> 
 
 
@@ -16,24 +16,26 @@
 
 ## About
 
-This project aims to automatically determine the correct scale of a scene created
-with [COLMAP](https://colmap.github.io/)
-by adding an aruco marker with a known scale into the scene. Scale Ambiguity is an ill-posed problem in monocular SfM
-and SLAM. To solve this problem, it is commonly suggested to manually measure a known distance of a calibration object
-in the 3D reconstruction and then scale the reconstruction accordingly [1]. To this end, we aim to automate this process
-and attach it to the reconstruction process as a post-processing step.
+This project aims to automatically compute the correct scale of a point cloud scene generated
+with  [COLMAP](https://colmap.github.io/) (we have only a colmap parser). by adding an aruco marker with into the scene.
+Due to the known scale is possible to overcome the scale ambiguity from monocular SfM and SLAM. In the literature it is
+commonly suggested to manually measure a known distance of a calibration object in the 3D reconstruction and then scale
+the reconstruction accordingly or make photos from two known positions[1]. Since there is unfortunately no automated
+approach to calculate an accurate scaling factor, this project aims to be attached as a post processing step to the
+reconstruction process.
 
 ## Setup
 
-A printed aruco marker must be placed in the scene to scale a selected scene using this method. The aruco marker can
-either be generated with cv2 or generated easily [here](https://chev.me/arucogen/) It must be ensured that the marker
-lies on a planar surface and has no curvature (otherwise, the marker will be recognized incorrectly or not at all) and
-that the size of the aruco marker matches the scene (the marker must be recognizable in the images!). When taking the
-images, make sure that the aruco marker is visible in at least two images; otherwise, no solution exists. It is
-advisable to have at least five images with the aruco marker for an accurate solution (Two pictures should already be
-enough for a sufficient approximation. However, blurry images or aruco markers that are too small could falsify the
-result). After the images have been acquired, the reconstructions process can be carried out using COLMAP. To determine
-the scaling factor, the project order of the COLMAP project must then be passed.
+Before taking the images for the reconstruction, an aruco marker must be printed out. Care should be taken to ensure
+that the size of the marker fits the scene to be recognizable in the images. Additionally the marker is placed on a
+planar surface and does not have curvature (otherwise, the marker will be recognized incorrectly or not at all). The
+aruco marker can either be generated
+with [ ArUco-markers-with-OpenCV-and-Python](https://github.com/KhairulIzwan/ArUco-markers-with-OpenCV-and-Python) or
+generated easily on [this website](https://chev.me/arucogen/). When taking the images, make sure that the aruco marker
+is visible in at least two images; otherwise, no solution exists. It is advisable to have at least five images with the
+aruco marker for an accurate solution (two pictures should already be enough for a sufficient approximation. However,
+blurry images or aruco markers that are too small could falsify the result). After the images have been acquired, the
+reconstructions process can be carried out using COLMAP.
 
 <!-- ## Theory
 
@@ -57,7 +59,7 @@ least-squares method [2].-->
 
 ## Installation
 
-This repository is tested on Python 3.7+ and can be installed from [PyPi](https://pypi.org/project/aruco-estimator)
+This repository is tested on Python 3.6+ and can be installed from [PyPi](https://pypi.org/project/aruco-estimator)
 <!-- Tutorial: https://www.youtube.com/watch?v=JkeNVaiUq_c -->
 
 ````angular2html
@@ -80,10 +82,10 @@ optional arguments:
 --visualize VISUALIZE             Flag to enable visualization
 ````
 
-To test the code on your local machine try the example COLMAP project in the provided data folder by using:
+To test the code on your local machine try the example project by using:
 
 ````angular2html
-python scale_estimation.py --colmap_project ./data
+python scale_estimator.py--test_data
 ````
 
 ### API
@@ -118,22 +120,29 @@ whether the corners of the aruco marker are detected and positioned correctly.
 
 ## Limitation/Improvements
 
+- [x] Make package for PyPi
+- [x] Upload to PyPi during CI
+- [x] Make dataset available for download
+- [x] Put aruco marker detection in threads
+- [ ] Install CLI Tool vi PyPi
+- [ ] Scale poses of camera/extrinsics.
 - [ ] Up to now only one aruco marker per scene can be detected. Multiple aruco marker could improve the scale
   estimation
+- [ ] Different aruco marker settings should be investigated for different scenarios to make it either more robust to
+  false detections
 - [ ] Geo referencing of aruco markers with earth coordinate system using GPS or RTK
 - [ ] Alternatives to aruco marker should be investigated.
 - [ ] Are the corners from the aruco marker returned identical regarding the orientation in the image?
-- [ ] Scale poses of camera/extrinsics.
-- [x] Make package for PyPi
-- [x] Upload to PyPi during CI
-- [ ] Make multiple datasets available for download (small/medium/large)
-- [ ] Install CLI Tool vi PyPi
-- [x] Put aruco marker detection in threads
 
 ## Acknowledgement
 
 The Code to read out the binary COLMAP data is partly borrowed from the
 repo [COLMAP Utility Scripts](https://github.com/uzh-rpg/colmap_utils) by [uzh-rpg](https://github.com/uzh-rpg).
+
+## Trouble Shooting
+
+- In some cases cv2 does not detect the aruco marker module. Reinstalling opencv-python and opencv-python-python might
+  help [Source](https://stackoverflow.com/questions/45972357/python-opencv-aruco-no-module-named-cv2-aruco)
 
 ## Resources
 
