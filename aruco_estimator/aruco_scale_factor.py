@@ -135,7 +135,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         # Multi Processing
         self.progress_bar = True
-        self.num_processes = 6  # 12 if os.cpu_count() > 12 else os.cpu_count()
+        self.num_processes = 12 if os.cpu_count() > 12 else os.cpu_count()
         self.image_names = []
         # Prepare parsed data for multi processing
         for image_idx in self.images.keys():
