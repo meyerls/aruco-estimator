@@ -3,6 +3,6 @@ open3d==0.15.2
 opencv-contrib-python==4.6.0.66
 opencv-python==4.6.0.66
 pyquaternion==0.9.9
-matplotlib==3.5.2
+matplotlib
 tqdm==4.64.0
 wget==3.2
