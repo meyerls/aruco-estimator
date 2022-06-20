@@ -61,7 +61,7 @@ def text_3d(text, pos, direction=None, density=10, degree=0.0, font="arial.ttf",
     return pcd
 
 
-def create_sphere_mesh(t: np.ndarray, color: list, radius: float) -> o3d.cpu.pybind.geometry.TriangleMesh:
+def create_sphere_mesh(t: np.ndarray, color: list, radius: float) -> o3d.pybind.geometry.TriangleMesh:
     '''
     Creates a sphere mesh, is translated to a parsed 3D coordinate and has uniform color
 
@@ -77,7 +77,7 @@ def create_sphere_mesh(t: np.ndarray, color: list, radius: float) -> o3d.cpu.pyb
     return sphere
 
 
-def generate_line_set(points: list, lines: list, color: list) -> o3d.cpu.pybind.geometry.LineSet:
+def generate_line_set(points: list, lines: list, color: list) -> o3d.pybind.geometry.LineSet:
     '''
     Generates a line set of parsed points, with uniform color.
 
@@ -134,9 +134,9 @@ def draw_camera_plane(extrinsics, intrinsics, scale):
 
 def draw_camera_viewport(extrinsics: np.ndarray, intrinsics: np.ndarray, image=None, scale=1) \
         -> Tuple[
-            o3d.cpu.pybind.geometry.LineSet,
-            o3d.cpu.pybind.geometry.TriangleMesh,
-            o3d.cpu.pybind.geometry.TriangleMesh]:
+            o3d.pybind.geometry.LineSet,
+            o3d.pybind.geometry.TriangleMesh,
+            o3d.pybind.geometry.TriangleMesh]:
     '''
 
     :param extrinsics:
