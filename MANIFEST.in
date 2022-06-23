@@ -1,1 +1,1 @@
-recursive-include ./aruco_estimator *
+recursive-include ./src/aruco_estimator *
