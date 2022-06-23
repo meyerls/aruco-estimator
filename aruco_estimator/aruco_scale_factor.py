@@ -135,7 +135,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         # Multi Processing
         self.progress_bar = True
-        self.num_processes = 12 if os.cpu_count() > 12 else os.cpu_count()
+        self.num_processes = os.cpu_count()  # 12 if os.cpu_count() > 12 else os.cpu_count()
         self.image_names = []
         # Prepare parsed data for multi processing
         for image_idx in self.images.keys():
@@ -338,8 +338,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         with Pool(self.num_processes) as p:
             result = list(tqdm(p.imap(
                 partial(detect_aruco_marker, dict_type=self.aruco_dict_type),
-                self.image_names),
-                               total=len(self.image_names), disable=not self.progress_bar))
+                self.image_names), total=len(self.image_names), disable=not self.progress_bar))
 
         if len(result) != len(self.images):
             raise ValueError("Thread return has not the same length as the input parameters!")

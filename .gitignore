@@ -1,8 +1,9 @@
 .idea/
 data/
+aruco_estimator/tmp_delete/
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+__pycache__/git s
 *.py[cod]
 *$py.class
 

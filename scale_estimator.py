@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     # Visualization of the scene and rays BEFORE scaling. This might be necessary for debugging
     if args.visualize:
-        aruco_scale_factor.visualization(frustum_scale=0.3, point_size=2, sphere_size=0.008)
+        aruco_scale_factor.visualization(frustum_scale=0.3, point_size=0.01, sphere_size=0.008)
 
     # aruco_scale_factor._ArucoScaleFactor__visualization_scaled_scene(frustum_scale=0.2)
     # Todo: Save output, PCD and poses. Visualize!

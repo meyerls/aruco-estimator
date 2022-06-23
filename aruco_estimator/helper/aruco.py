@@ -177,7 +177,7 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
     if aruco_id is None:
         return None, None, cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
-    if True:
+    if False:
         plt.figure()
         plt.imshow(gray, cmap='gray')
         for i in range(len(aruco_id)):
