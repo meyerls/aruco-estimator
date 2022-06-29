@@ -12,5 +12,5 @@ See LICENSE file for more information.
 # ...
 
 # Own modules
-from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
+from src.aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
 

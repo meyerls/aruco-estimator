@@ -13,17 +13,17 @@ from typing import Tuple
 
 # Libs
 import cv2
-import numpy as np
 from cv2 import aruco
 import matplotlib.pyplot as plt
+import numpy as np
+import open3d as o3d
 from PIL import Image
 
 # Own modules
 try:
-    from .visualization import *
+    from .colmap.src.colmap.visualization import *
 except ImportError:
-    from visualization import *
-
+    from colmap import visualization
 
 def ray_cast_aruco_corners_visualization(extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple,
                                          corners3d: np.ndarray) \

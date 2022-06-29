@@ -91,8 +91,7 @@ python scale_estimator.py--test_data
 ### API
 
 ````python
-from aruco_estimator import ArucoScaleFactor
-from aruco_estimator.helper import download
+from aruco_estimator import ArucoScaleFactor, download
 
 # Download example dataset. Door dataset is roughly 200 MB
 dataset = download.Dataset()
@@ -108,7 +107,7 @@ dense, scale_factor = aruco_scale_factor.apply(true_scale=dataset.scale)  # scal
 print('Point cloud and poses are scaled by: ', scale_factor)
 
 # Visualization of the scene and rays BEFORE scaling. This might be necessary for debugging
-aruco_scale_factor.visualization(frustum_scale=0.2)
+aruco_scale_factor.visualize_estimation(frustum_scale=0.2)
 ````
 
 ### Visualization

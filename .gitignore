@@ -1,5 +1,6 @@
 .idea/
 src/aruco_estimator/data/
+src/data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/git s
