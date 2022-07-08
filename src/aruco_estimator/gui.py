@@ -6,8 +6,10 @@ Code for COLMAP readout borrowed from https://github.com/uzh-rpg/colmap_utils/tr
 """
 
 # Built-in/Generic Imports
-import sys
+import os
 import platform
+import sys
+
 
 # Libs
 import cv2

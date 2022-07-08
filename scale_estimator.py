@@ -55,8 +55,9 @@ if __name__ == '__main__':
     dense, scale_factor = aruco_scale_factor.apply(true_scale=args.aruco_size)
     print('Point cloud and poses are scaled by: ', scale_factor)
 
-    if False:#DEBUG:
-        aruco_scale_factor.visualize_scaled_scene()
+    if DEBUG:
+        # aruco_scale_factor.visualize_scaled_scene()
+        aruco_scale_factor.analyze(true_scale=args.aruco_size)
 
     # Visualization of the scene and rays BEFORE scaling. This might be necessary for debugging
     if args.visualize:

@@ -6,15 +6,15 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
-# Built-in/Generic Imports
-from functools import wraps
-from functools import partial
-import time
 import os
-
+import time
 # Libs
 from copy import deepcopy
+from functools import partial
+# Built-in/Generic Imports
+from functools import wraps
 from multiprocessing import Pool
+
 from tqdm import tqdm
 
 # Own modules
@@ -27,9 +27,12 @@ try:
     from src.aruco_estimator.aruco import *
     from src.aruco_estimator.opt import *
     from src.aruco_estimator.base import *
-except ModuleNotFoundError:
-    from colmap import COLMAP
-    from colmap.image import Intrinsics
+except ImportError:
+    from colmap.src.colmap.colmap import COLMAP
+    from colmap.src.colmap.camera import Intrinsics
+    from colmap.src.colmap.bin import write_cameras_binary
+    from colmap.src.colmap.utils import convert_colmap_extrinsics
+    from colmap.src.colmap.visualization import *
     from aruco import *
     from opt import *
     from base import *
@@ -157,13 +160,9 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         :return:
         """
         for image_idx in self.images.keys():
-            camera_intrinsics = Intrinsics(camera=self.cameras[self.images[image_idx].camera_id])
-
-            Rwc, twc, M = convert_colmap_extrinsics(frame=self.images[image_idx])
-
             if self.images[image_idx].aruco_corners is not None:
-                p0, n = ray_cast_aruco_corners(extrinsics=M,
-                                               intrinsics=camera_intrinsics.K,
+                p0, n = ray_cast_aruco_corners(extrinsics=self.images[image_idx].extrinsics,
+                                               intrinsics=self.images[image_idx].intrinsics.K,
                                                corners=self.images[image_idx].aruco_corners)
 
                 self.P0 = np.append(self.P0, p0)
@@ -206,8 +205,6 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
                                                  [0, 0, 1],
                                                  [1, 1, 1]],
                                           radius=sphere_size)
-        geometries.extend(aruco_sphere)
-
         aruco_rect = generate_line_set(points=[self.aruco_corners_3d[0] * self.scale_factor,
                                                self.aruco_corners_3d[1] * self.scale_factor,
                                                self.aruco_corners_3d[2] * self.scale_factor,
@@ -248,28 +245,15 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         @param sphere_size:
         """
 
-        geometries = [self.get_dense()]
+        self.add_colmap_reconstruction_geometries(frustum_scale=frustum_scale)
 
         for image_idx in self.images.keys():
-            camera_intrinsics = Intrinsics(camera=self.cameras[self.images[image_idx].camera_id])
-
-            Rwc, twc, M = convert_colmap_extrinsics(frame=self.images[image_idx])
-
-            line_set, sphere, mesh = draw_camera_viewport(extrinsics=M,
-                                                          intrinsics=camera_intrinsics.K,
-                                                          image=self.images[image_idx].image,
-                                                          scale=frustum_scale)
-
-            aruco_line_set = ray_cast_aruco_corners_visualization(extrinsics=M,
-                                                                  intrinsics=camera_intrinsics.K,
+            aruco_line_set = ray_cast_aruco_corners_visualization(extrinsics=self.images[image_idx].extrinsics,
+                                                                  intrinsics=self.images[image_idx].intrinsics.K,
                                                                   corners=self.images[image_idx].aruco_corners,
                                                                   corners3d=self.aruco_corners_3d)
 
-            geometries.append(aruco_line_set)
-
-            geometries.append(mesh)
-            geometries.append(line_set)
-            geometries.extend(sphere)
+            self.geometries.append(aruco_line_set)
 
         aruco_sphere = create_sphere_mesh(t=self.aruco_corners_3d,
                                           color=[[0, 0, 0],
@@ -277,7 +261,6 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
                                                  [0, 0, 1],
                                                  [1, 1, 1]],
                                           radius=sphere_size)
-        geometries.extend(aruco_sphere)
 
         aruco_rect = generate_line_set(points=[self.aruco_corners_3d[0],
                                                self.aruco_corners_3d[1],
@@ -285,9 +268,10 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
                                                self.aruco_corners_3d[3]],
                                        lines=[[0, 1], [1, 2], [2, 3], [3, 0]],
                                        color=[1, 0, 0])
-        geometries.append(aruco_rect)
+        self.geometries.append(aruco_rect)
+        self.geometries.extend(aruco_sphere)
 
-        self.start_visualizer(geometries=geometries, point_size=point_size, title='Aruco Scale Factor Estimation')
+        self.start_visualizer(point_size=point_size, title='Aruco Scale Factor Estimation')
 
     @timeit
     def __detect(self):
@@ -310,7 +294,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
             self.images[image_idx].aruco_corners = result[image_idx - 1][0]
             self.images[image_idx].aruco_id = result[image_idx - 1][1]
             self.images[image_idx].image_path = self.image_names[image_idx - 1]
-            #self.images[image_idx].image = cv2.resize(result[image_idx - 1][2], (0, 0), fx=0.3, fy=0.3)
+            # self.images[image_idx].image = cv2.resize(result[image_idx - 1][2], (0, 0), fx=0.3, fy=0.3)
 
     def run(self) -> np.ndarray:
         """
@@ -326,23 +310,23 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         return self.aruco_distance
 
-    def analyze(self):
+    def analyze(self, true_scale):
 
-        distance = np.zeros(len(self.P0) // 3)
+        sf = np.zeros(len(self.P0) // 3)
 
         for i in range(2, len(self.P0) // 3 + 1):
             P0_i = self.P0.reshape(len(self.P0) // 3, 3)[:i]
             N_i = self.N.reshape(len(self.N) // 12, 4, 3)[:i]
             aruco_corners_3d = intersect_parallelized(P0=P0_i, N=N_i)
-            aruco_distance = self.__evaluate(aruco_corners_3d)
-            distance[i - 1] = aruco_distance
+            aruco_dist = self.__evaluate(aruco_corners_3d)
+            sf[i - 1] = (true_scale / 100) / aruco_dist
 
         plt.figure()
-        plt.title('Aruco Distance over Number of Images')
+        plt.title('Scale Factor Estimation over Number of Images')
         plt.xlabel('# Images')
-        plt.ylabel('Aruco Distance')
+        plt.ylabel('Scale Factor')
         plt.grid()
-        plt.plot(np.linspace(1, len(self.P0) // 3, len(self.P0) // 3)[1:], distance[1:])
+        plt.plot(np.linspace(1, len(self.P0) // 3, len(self.P0) // 3)[1:], sf[1:])
         plt.show()
 
     @staticmethod
@@ -390,7 +374,7 @@ if __name__ == '__main__':
     aruco_distance = aruco_scale_factor.run()
     print('Mean distance between aruco markers: ', aruco_distance)
 
-    aruco_scale_factor.analyze()
+    aruco_scale_factor.analyze(true_scale=args.aruco_size)
 
     dense, scale_factor = aruco_scale_factor.apply(true_scale=args.aruco_size)
     print('Point cloud and poses are scaled by: ', scale_factor)

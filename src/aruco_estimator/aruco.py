@@ -23,7 +23,7 @@ from PIL import Image
 try:
     from .colmap.src.colmap.visualization import *
 except ImportError:
-    from colmap import visualization
+    from colmap.src.colmap.visualization import *
 
 
 def ray_cast_aruco_corners_visualization(extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple,
