@@ -18,7 +18,7 @@ import open3d as o3d
 try:
     from aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
     from aruco_estimator import download
-except [ImportError, ModuleNotFoundError]:
+except ModuleNotFoundError:
     from src.aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
     from src.aruco_estimator import download
 

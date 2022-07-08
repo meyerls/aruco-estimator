@@ -27,7 +27,7 @@ try:
     from aruco import *
     from opt import *
     from base import *
-except [ImportError, ModuleNotFoundError]:
+except ModuleNotFoundError:
     from .colmap.src.colmap.colmap import COLMAP
     from .colmap.src.colmap.camera import Intrinsics
     from .colmap.src.colmap.bin import write_cameras_binary
