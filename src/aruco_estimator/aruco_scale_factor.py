@@ -20,7 +20,7 @@ from tqdm import tqdm
 # Own modules
 try:
     from .colmap.src.colmap.colmap import COLMAP
-    from .colmap.src.colmap.image import Intrinsics
+    from .colmap.src.colmap.camera import Intrinsics
     from .colmap.src.colmap.bin import write_cameras_binary
     from .colmap.src.colmap.utils import convert_colmap_extrinsics
     from .colmap.src.colmap.visualization import *
@@ -139,7 +139,8 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         # Multi Processing
         self.progress_bar = True
-        self.num_processes = os.cpu_count()  # 12 if os.cpu_count() > 12 else os.cpu_count()
+        self.num_processes = 8 if os.cpu_count() > 8 else os.cpu_count()
+        print('Num process: ', self.num_processes)
         self.image_names = []
         # Prepare parsed data for multi processing
         for image_idx in self.images.keys():
@@ -309,7 +310,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
             self.images[image_idx].aruco_corners = result[image_idx - 1][0]
             self.images[image_idx].aruco_id = result[image_idx - 1][1]
             self.images[image_idx].image_path = self.image_names[image_idx - 1]
-            self.images[image_idx].image = cv2.resize(result[image_idx - 1][2], (0, 0), fx=0.4, fy=0.4)
+            #self.images[image_idx].image = cv2.resize(result[image_idx - 1][2], (0, 0), fx=0.3, fy=0.3)
 
     def run(self) -> np.ndarray:
         """

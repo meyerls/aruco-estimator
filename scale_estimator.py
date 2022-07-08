@@ -28,9 +28,9 @@ if __name__ == '__main__':
     parser.add_argument('--visualize', action='store_true', help='Flag to enable visualization')
     parser.add_argument('--point_size', type=float, help='Point size of the visualized dense point cloud. '
                                                          'Depending on the number of points in the model. '
-                                                         'Between 0.001 and 2', default=2)
+                                                         'Between 0.001 and 2', default=0.2)
     parser.add_argument('--frustum_size', type=float, help='Size of the visualized camera frustums. '
-                                                           'Between 0 (small) and 1 (large)', default=0.7)
+                                                           'Between 0 (small) and 1 (large)', default=0.2)
     parser.add_argument('--test_data', action='store_true', help='Download and try out test data')
     args = parser.parse_args()
 
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     dense, scale_factor = aruco_scale_factor.apply(true_scale=args.aruco_size)
     print('Point cloud and poses are scaled by: ', scale_factor)
 
-    if DEBUG:
+    if False:#DEBUG:
         aruco_scale_factor.visualize_scaled_scene()
 
     # Visualization of the scene and rays BEFORE scaling. This might be necessary for debugging
