@@ -19,15 +19,6 @@ from tqdm import tqdm
 
 # Own modules
 try:
-    from .colmap.src.colmap.colmap import COLMAP
-    from .colmap.src.colmap.camera import Intrinsics
-    from .colmap.src.colmap.bin import write_cameras_binary
-    from .colmap.src.colmap.utils import convert_colmap_extrinsics
-    from .colmap.src.colmap.visualization import *
-    from src.aruco_estimator.aruco import *
-    from src.aruco_estimator.opt import *
-    from src.aruco_estimator.base import *
-except ImportError:
     from colmap.src.colmap.colmap import COLMAP
     from colmap.src.colmap.camera import Intrinsics
     from colmap.src.colmap.bin import write_cameras_binary
@@ -36,6 +27,15 @@ except ImportError:
     from aruco import *
     from opt import *
     from base import *
+except [ImportError, ModuleNotFoundError]:
+    from .colmap.src.colmap.colmap import COLMAP
+    from .colmap.src.colmap.camera import Intrinsics
+    from .colmap.src.colmap.bin import write_cameras_binary
+    from .colmap.src.colmap.utils import convert_colmap_extrinsics
+    from .colmap.src.colmap.visualization import *
+    from src.aruco_estimator.aruco import *
+    from src.aruco_estimator.opt import *
+    from src.aruco_estimator.base import *
 
     pass
 
