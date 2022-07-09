@@ -181,12 +181,8 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         geometries = [self.dense_scaled]
 
         for image_idx in self.images_scaled.keys():
-            camera_intrinsics = Intrinsics(camera=self.cameras[self.images_scaled[image_idx].camera_id])
-
-            Rwc, twc, M = convert_colmap_extrinsics(frame=self.images_scaled[image_idx])
-
-            line_set, sphere, mesh = draw_camera_viewport(extrinsics=M,
-                                                          intrinsics=camera_intrinsics.K,
+            line_set, sphere, mesh = draw_camera_viewport(extrinsics=self.images_scaled[image_idx].extrinsics,
+                                                          intrinsics=self.images_scaled[image_idx].intrinsics.K,
                                                           image=self.images_scaled[image_idx].image,
                                                           scale=frustum_scale)
 
@@ -233,9 +229,10 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         '''
 
+        geometries.extend(aruco_sphere)
         geometries.append(aruco_rect)
 
-        self.start_visualizer(geometries=geometries, point_size=point_size, title='Aruco Scale Factor Estimation')
+        self.start_visualizer_scaled(geometries=geometries, point_size=point_size, title='Aruco Scale Factor Estimation Scaled')
 
     def visualize_estimation(self, frustum_scale: float = 1, point_size: float = 1., sphere_size: float = 0.02):
         """
