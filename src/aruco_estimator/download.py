@@ -81,9 +81,9 @@ class Dataset:
 
     def download_door_dataset(self, output_path: str = os.path.abspath(__file__), overwrite: bool = False):
 
-        self.url = 'https://faubox.rrze.uni-erlangen.de/dl/fiUNWMmsaEAavXHfjqxfyXU9/door.zip'
+        self.url = 'https://faubox.rrze.uni-erlangen.de/getlink/fiUNWMmsaEAavXHfjqxfyXU9/door.zip'
         self.dataset_name = 'door'
-        self.scale = 15  # cm
+        self.scale = 0.15  # cm
 
         existence = self.__check_existence(output_directory=output_path, dataset_name=self.dataset_name)
 
