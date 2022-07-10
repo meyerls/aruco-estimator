@@ -68,4 +68,4 @@ if __name__ == '__main__':
     # aruco_scale_factor._ArucoScaleFactor__visualization_scaled_scene(frustum_scale=0.2)
     # Todo: Save output, PCD and poses. Visualize!
     o3d.io.write_point_cloud(os.path.join(args.colmap_project, 'scaled.ply'), dense)
-    aruco_scale_factor.write_camera_data()
+    aruco_scale_factor.write_data()
