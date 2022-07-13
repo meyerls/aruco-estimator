@@ -10,10 +10,10 @@ import os
 import platform
 import sys
 
-
 # Libs
 import cv2
 import numpy as np
+from pathlib import Path
 import open3d as o3d
 import open3d.visualization.gui as gui
 import open3d.visualization.rendering as rendering
@@ -247,6 +247,7 @@ class Settings:
         self.show_axes = False
         self.show_cameras = False
         self.show_images = False
+        self.display_images = False
 
         self.apply_material = True  # clear to False after processing
         self._materials = {
@@ -302,6 +303,8 @@ class AppWindow:
             "Open3D", width, height)
         w = self.window  # to make the code more concise
 
+        self.colmap_project = None
+
         # 3D widget
         self._scene = gui.SceneWidget()
         self._scene.scene = rendering.Open3DScene(w.renderer)
@@ -309,8 +312,7 @@ class AppWindow:
         em = w.theme.font_size
         separation_height = int(round(0.5 * em))
 
-        self._settings_panel = gui.Vert(
-            0, gui.Margins(0.25 * em, 0.25 * em, 0.25 * em, 0.25 * em))
+        self._settings_panel = gui.Vert(0, gui.Margins(0.25 * em, 0.25 * em, 0.25 * em, 0.25 * em))
 
         view_ctrls = gui.CollapsableVert("View controls", 0.25 * em,
                                          gui.Margins(em, 0, 0, 0))
@@ -393,6 +395,9 @@ class AppWindow:
         self._show_images.set_on_checked(self._on_show_images)
         self._show_images.visible = False
 
+        self._pcd = gui.Combobox()
+        self._pcd.set_on_selection_changed(self._on_pcd)
+
         grid = gui.VGrid(2, 0.25 * em)
         grid.add_child(gui.Label("Cameras"))
         grid.add_child(self._show_cameras)
@@ -400,11 +405,27 @@ class AppWindow:
         grid.add_child(self._resize_cameras)
         grid.add_child(gui.Label("Images"))
         grid.add_child(self._show_images)
+        grid.add_child(gui.Label("PCD"))
+        grid.add_child(self._pcd)
         colmap_settings.add_child(grid)
 
         self._settings_panel.add_fixed(separation_height)
         self._settings_panel.add_child(colmap_settings)
         # ----
+
+        self.image_panel = gui.Vert(100, gui.Margins(0.25 * em, 0.25 * em, 0.25 * em, 0.25 * em))
+        self._display_images = gui.ImageWidget()
+        # self._display_images.visible = True
+        r = self.window.content_rect
+        width = 17 * self.window.theme.font_size
+        self._display_images.frame = gui.Rect(r.get_right() - width * 2, r.get_bottom() - width * 2 / 3 * 2 + 105,
+                                              width * 2,
+                                              width * 2 / 3 * 2)
+        self.image_panel.add_child(self._display_images)
+
+        w.add_child(self.image_panel)
+
+        self._scene.set_on_mouse(self.on_mouse)
 
         # ---- Menu ----
         # The menu is global (because the macOS menu is global), so only create
@@ -494,12 +515,15 @@ class AppWindow:
         r = self.window.content_rect
         self._scene.frame = r
         width = 17 * layout_context.theme.font_size
-        height = min(
-            r.height,
-            self._settings_panel.calc_preferred_size(
-                layout_context, gui.Widget.Constraints()).height)
-        self._settings_panel.frame = gui.Rect(r.get_right() - width, r.y, width,
-                                              height)
+        height = min(r.height,
+                     self._settings_panel.calc_preferred_size(layout_context, gui.Widget.Constraints()).height)
+        self._settings_panel.frame = gui.Rect(r.get_right() - width, r.y, width, height)
+        self.image_panel.frame = gui.Rect(r.get_right() - width * 2, r.get_bottom() - width * 2 / 3 * 2 + 105,
+                                          width * 2,
+                                          width * 2 / 3 * 2)
+        self._display_images.frame = gui.Rect(r.get_right() - width * 2, r.get_bottom() - width * 2 / 3 * 2 + 105,
+                                              width * 2,
+                                              width * 2 / 3 * 2)
 
     def _on_show_skybox(self, show):
         self.settings.show_skybox = show
@@ -524,6 +548,14 @@ class AppWindow:
         self.window.show_dialog(dlg)
 
         self._show_cameras.visible = True
+
+    def _on_pcd(self, name, index):
+        self._scene.scene.remove_geometry("__model__")
+        geometry = o3d.io.read_point_cloud(name)
+        self._scene.scene.add_geometry("__model__", geometry,
+                                       rendering.MaterialRecord())
+
+        self._apply_settings()
 
     def _on_menu_open(self):
         dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose file to load",
@@ -695,10 +727,11 @@ class AppWindow:
 
         self._apply_settings()
 
-        self._apply_settings()
-
     def _on_load_colmap_dialog_done(self, foldername):
         self.window.close_dialog()
+
+        for file in Path(foldername).glob('*.ply'):
+            self._pcd.add_item(file.name)
 
         # self.colmap_project = colmap.COLMAP(project_path=foldername, dense_pc='cropped_02.ply')
         self.colmap_project = colmap.COLMAP(project_path=foldername, dense_pc='fused.ply')
@@ -845,6 +878,33 @@ class AppWindow:
             o3d.io.write_image(path, img, quality)
 
         self._scene.scene.scene.render_to_image(on_image)
+
+    def on_mouse(self, e):
+        if e.type == gui.MouseEvent.Type.BUTTON_DOWN:
+            print("[debug] mouse:", (e.x, e.y))
+            print(rendering.Camera.get_model_matrix(self._scene.scene.camera))
+
+            if self.colmap_project is not None:
+                l2_min = np.inf
+                idx_min_dist = -1
+                for idx in self.colmap_project.images.keys():
+                    l2_dist = np.linalg.norm(self.colmap_project.images[idx].tvec - rendering.Camera.get_model_matrix(
+                        self._scene.scene.camera)[:3, 3])
+
+                    if l2_dist < l2_min:
+                        idx_min_dist = idx
+
+                    l2_min = min(l2_dist, l2_min)
+
+                self._display_images.update_image(o3d.geometry.Image(self.colmap_project.images[idx_min_dist].image))
+                r = self.window.content_rect
+                width = 17 * self.window.theme.font_size
+                self._display_images.frame = gui.Rect(r.get_right() - width * 2,
+                                                      r.get_bottom() - width * 2 / 3 * 2 + 105,
+                                                      width * 2,
+                                                      width * 2 / 3 * 2)
+
+        return gui.Widget.EventCallbackResult.IGNORED
 
 
 def main():
