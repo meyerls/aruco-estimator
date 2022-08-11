@@ -59,11 +59,19 @@ least-squares method [2].-->
 
 ## Installation
 
+### PyPi
+
 This repository is tested on Python 3.6+ and can be installed from [PyPi](https://pypi.org/project/aruco-estimator)
 <!-- Tutorial: https://www.youtube.com/watch?v=JkeNVaiUq_c -->
 
 ````angular2html
 pip install aruco-estimator
+````
+
+### Source
+
+````angular2html
+git clone --recurse-submodules -j8 https://github.com/meyerls/aruco-estimator.git
 ````
 
 ## Usage
