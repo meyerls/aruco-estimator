@@ -155,10 +155,10 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         self.image_names = []
         # Prepare parsed data for multi processing
         for image_idx in self.images.keys():
-            self.image_names.append(self._COLMAP__src_image_path.joinpath(self.images[image_idx].name).__str__())
+            self.image_names.append(self._src_image_path.joinpath(self.images[image_idx].name).__str__())
 
-        if os.path.exists(self._COLMAP__project_path.joinpath('aruco_size.txt')):
-            self.aruco_size = float(open(self._COLMAP__project_path.joinpath('aruco_size.txt'), 'r').read())
+        if os.path.exists(self._project_path.joinpath('aruco_size.txt')):
+            self.aruco_size = float(open(self._project_path.joinpath('aruco_size.txt'), 'r').read())
         else:
             self.aruco_size = None
 
@@ -180,7 +180,6 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
                 self.P0 = np.append(self.P0, p0)
                 self.N = np.append(self.N, n)
-
 
     @staticmethod
     def __evaluate(aruco_corners_3d: np.ndarray) -> np.ndarray:
@@ -219,7 +218,6 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
             self.images[image_idx].aruco_id = result[image_idx - 1][1]
             self.images[image_idx].image_path = self.image_names[image_idx - 1]
             # self.images[image_idx].image = cv2.resize(result[image_idx - 1][2], (0, 0), fx=0.3, fy=0.3)
-
 
     def visualize_scaled_scene(self, frustum_scale: float = 0.15, point_size: float = 1., sphere_size: float = 0.01):
         """
@@ -385,12 +383,11 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         # self.sparse_scaled = deepcopy(self.get_sparse())
         # self.sparse_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
 
-
         self.sparse_scaled = deepcopy(self.sparse)
         for num in self.sparse.keys():
             self.sparse_scaled[num].xyz = self.sparse_scaled[num].xyz * self.scale_factor
 
-        #self.sparse_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
+        # self.sparse_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
 
         # ToDo: Scale tvec and save
         self.images_scaled = deepcopy(self.images)
@@ -401,9 +398,9 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
     def write_data(self):
 
-        cameras_scaled = self._COLMAP__project_path.joinpath('sparse_scaled/cameras')
-        images_scaled = self._COLMAP__project_path.joinpath('sparse_scaled/images')
-        points_scaled = self._COLMAP__project_path.joinpath('sparse_scaled/points3D')
+        cameras_scaled = self._project_path.joinpath('sparse_scaled/cameras')
+        images_scaled = self._project_path.joinpath('sparse_scaled/images')
+        points_scaled = self._project_path.joinpath('sparse_scaled/points3D')
 
         cameras_scaled.mkdir(parents=False, exist_ok=True)
         images_scaled.mkdir(parents=False, exist_ok=True)
