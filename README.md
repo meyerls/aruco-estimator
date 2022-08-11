@@ -70,8 +70,6 @@ pip install aruco-estimator
 
 ### Command Line
 
-NOT IMPLEMENTED
-
 ````angular2html
 usage: scale_estimator.py [-h] [--colmap_project COLMAP_PROJECT]  [--visualize VISUALIZE]
 Estimate scale factor for COLMAP projects with aruco markers.
@@ -85,14 +83,14 @@ optional arguments:
 To test the code on your local machine try the example project by using:
 
 ````angular2html
-python scale_estimator.py--test_data
+python scale_estimator.py- -test_data
 ````
 
 ### API
 
 ````python
-from aruco_estimator import ArucoScaleFactor
-from aruco_estimator.helper import download
+from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
+from aruco_estimator import download
 
 # Download example dataset. Door dataset is roughly 200 MB
 dataset = download.Dataset()
@@ -103,18 +101,19 @@ aruco_scale_factor = ArucoScaleFactor(project_path=dataset.dataset_path)
 aruco_distance = aruco_scale_factor.run()
 print('Mean distance between aruco markers: ', aruco_distance)
 
-# Calculate scaling factor and apply to scene
+# Calculate scaling factor, apply it to the scene and save scaled point cloud
 dense, scale_factor = aruco_scale_factor.apply(true_scale=dataset.scale)  # scale in cm
 print('Point cloud and poses are scaled by: ', scale_factor)
 
 # Visualization of the scene and rays BEFORE scaling. This might be necessary for debugging
-aruco_scale_factor.visualization(frustum_scale=0.2)
+aruco_scale_factor.visualize_estimation(frustum_scale=0.2)
 ````
 
 ### Visualization
 
 The visualization is suitable for displaying the scene, the camera frustums, and the casted rays. It is usefull to check
-whether the corners of the aruco marker are detected and positioned correctly.
+whether the corners of the aruco marker are detected and positioned correctly. If the aruco markers are not detected
+correctly the aruco settings must be changed according to the scene to be more robust.
 
 ![](https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/visualization.png)
 

@@ -1,0 +1,4 @@
+
+[submodule "src/aruco_estimator/colmap"]
+	path = src/aruco_estimator/colmap
+	url = https://github.com/meyerls/colmap.git

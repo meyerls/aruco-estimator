@@ -1,8 +1,9 @@
 .idea/
-data/
+src/aruco_estimator/data/
+src/data/
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+__pycache__/git s
 *.py[cod]
 *$py.class
 

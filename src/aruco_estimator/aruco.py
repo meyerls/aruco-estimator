@@ -13,16 +13,17 @@ from typing import Tuple
 
 # Libs
 import cv2
-import numpy as np
 from cv2 import aruco
 import matplotlib.pyplot as plt
+import numpy as np
+import open3d as o3d
 from PIL import Image
 
 # Own modules
 try:
-    from .visualization import *
+    from .colmap.src.colmap.visualization import *
 except ImportError:
-    from visualization import *
+    from colmap.src.colmap.visualization import *
 
 
 def ray_cast_aruco_corners_visualization(extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple,
@@ -134,7 +135,7 @@ class ArucoDetection:
 
 def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
                         aruco_parameters: cv2.aruco.DetectorParameters = aruco.DetectorParameters_create()) -> Tuple[
-    tuple, np.ndarray, np.ndarray]:
+    tuple, np.ndarray]:
     """
     More information on aruco parameters: https://docs.opencv.org/4.x/d1/dcd/structcv_1_1aruco_1_1DetectorParameters.html
 
@@ -175,9 +176,9 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
                                                                  parameters=aruco_parameters)
 
     if aruco_id is None:
-        return None, None, cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        return None, None
 
-    if True:
+    if False:
         plt.figure()
         plt.imshow(gray, cmap='gray')
         for i in range(len(aruco_id)):
@@ -186,4 +187,7 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
         plt.legend()
         plt.show()
 
-    return corners, aruco_id, image
+    del gray
+    del image
+
+    return corners, aruco_id

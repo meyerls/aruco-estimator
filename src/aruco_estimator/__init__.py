@@ -12,5 +12,9 @@ See LICENSE file for more information.
 # ...
 
 # Own modules
-from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
+from . import aruco
+from . import aruco_scale_factor
+from . import base
+from . import download
+from . import opt
 
