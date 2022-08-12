@@ -16,13 +16,12 @@
 
 ## About
 
-This project aims to automatically compute the correct scale of a point cloud scene generated
-with  [COLMAP](https://colmap.github.io/) (we have only a colmap parser). by adding an aruco marker with into the scene.
-Due to the known scale is possible to overcome the scale ambiguity from monocular SfM and SLAM. In the literature it is
-commonly suggested to manually measure a known distance of a calibration object in the 3D reconstruction and then scale
-the reconstruction accordingly or make photos from two known positions[1]. Since there is unfortunately no automated
-approach to calculate an accurate scaling factor, this project aims to be attached as a post processing step to the
-reconstruction process.
+This project aims to automatically compute the correct scale of a point cloud generated
+with  [COLMAP](https://colmap.github.io/). By adding an aruco marker with into the scene it is possible to overcome the 
+scale ambiguity from monocular SfM and SLAM. In the literature it is commonly suggested to manually measure a known 
+distance of a calibration object in the 3D reconstruction and then scale  the reconstruction accordingly or make photos 
+from two known positions[1]. Since there is unfortunately no automated approach to calculate an accurate scaling factor,
+this project aims to be attached as a post processing step to the reconstruction process.
 
 ## Setup
 
@@ -34,8 +33,10 @@ with [ ArUco-markers-with-OpenCV-and-Python](https://github.com/KhairulIzwan/ArU
 generated easily on [this website](https://chev.me/arucogen/). When taking the images, make sure that the aruco marker
 is visible in at least two images; otherwise, no solution exists. It is advisable to have at least five images with the
 aruco marker for an accurate solution (two pictures should already be enough for a sufficient approximation. However,
-blurry images or aruco markers that are too small could falsify the result). After the images have been acquired, the
-reconstructions process can be carried out using COLMAP.
+blurry images or aruco markers that are too small could falsify the result).
+After the images have been acquired, the reconstructions process can be carried out using COLMAP. For the algorithm to
+work it only needs the result of the Structure from Motion part (extrinsic parameters). The MVS part for the dense
+reconstruction is used to visually verify the result.
 
 <!-- ## Theory
 
@@ -71,7 +72,9 @@ pip install aruco-estimator
 ### Source
 
 ````angular2html
-git clone --recurse-submodules -j8 https://github.com/meyerls/aruco-estimator.git
+git clone https://github.com/meyerls/aruco-estimator.git
+cd aruco-estimator
+git submodule update --init --recursive --jobs 0
 ````
 
 ## Usage
@@ -91,7 +94,7 @@ optional arguments:
 To test the code on your local machine try the example project by using:
 
 ````angular2html
-python scale_estimator.py- -test_data
+python scale_estimator.py --test_data
 ````
 
 ### API
@@ -99,6 +102,8 @@ python scale_estimator.py- -test_data
 ````python
 from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
 from aruco_estimator import download
+import os
+import open3d as o3d
 
 # Download example dataset. Door dataset is roughly 200 MB
 dataset = download.Dataset()
@@ -115,6 +120,8 @@ print('Point cloud and poses are scaled by: ', scale_factor)
 
 # Visualization of the scene and rays BEFORE scaling. This might be necessary for debugging
 aruco_scale_factor.visualize_estimation(frustum_scale=0.2)
+o3d.io.write_point_cloud(os.path.join(dataset.colmap_project, 'scaled.ply'), dense)
+aruco_scale_factor.write_data()
 ````
 
 ### Visualization
@@ -131,8 +138,8 @@ correctly the aruco settings must be changed according to the scene to be more r
 - [x] Upload to PyPi during CI
 - [x] Make dataset available for download
 - [x] Put aruco marker detection in threads
+- [x] Scale poses of camera/extrinsics.
 - [ ] Install CLI Tool vi PyPi
-- [ ] Scale poses of camera/extrinsics.
 - [ ] Up to now only one aruco marker per scene can be detected. Multiple aruco marker could improve the scale
   estimation
 - [ ] Different aruco marker settings should be investigated for different scenarios to make it either more robust to
