@@ -13,7 +13,7 @@ with open("README.md", 'r') as f:
     long_description = f.read()
 
 setuptools.setup(
-    name='aruco_estimator',
+    name='aruco-estimator',
     version='1.0.6',
     description='Aruco Scale Factor Estimation',
     license="MIT",
