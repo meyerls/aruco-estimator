@@ -113,6 +113,7 @@ git clone https://github.com/meyerls/aruco-estimator.git
 cd aruco-estimator
 git submodule update --init --recursive --jobs 0
 conda env create -f environment.yml
+conda activate aruco_estimator
 ```` 
 
 ### Usage of Command Line
