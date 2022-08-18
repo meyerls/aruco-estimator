@@ -8,8 +8,10 @@ See LICENSE file for more information.
 
 # Built-in/Generic Imports
 import setuptools
+from os import path
 
-with open("README.md", 'r') as f:
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setuptools.setup(
@@ -32,11 +34,10 @@ setuptools.setup(
                       "tqdm",
                       "wget"],  # external packages as dependencies
     classifiers=[
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-    ]
+    ],
+    zip_safe=False,
 )

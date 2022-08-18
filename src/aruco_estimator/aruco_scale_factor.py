@@ -14,6 +14,7 @@ from functools import wraps
 from multiprocessing import Pool
 
 # Libs
+import numpy as np
 from tqdm import tqdm
 
 # Own modules
@@ -38,7 +39,7 @@ except ModuleNotFoundError:
 
     pass
 
-DEBUG = True
+DEBUG = False
 
 
 class ScaleFactorBase:
@@ -402,13 +403,17 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         images_scaled = self._project_path.joinpath('sparse_scaled/images')
         points_scaled = self._project_path.joinpath('sparse_scaled/points3D')
 
-        cameras_scaled.mkdir(parents=False, exist_ok=True)
+        cameras_scaled.mkdir(parents=True, exist_ok=True)
         images_scaled.mkdir(parents=False, exist_ok=True)
         points_scaled.mkdir(parents=False, exist_ok=True)
 
         for image_idx in self.images_scaled.keys():
             filename = images_scaled.joinpath('image_{:04d}.txt'.format(image_idx - 1))
             np.savetxt(filename, self.images[image_idx].extrinsics.flatten())
+
+        # Save scale factor
+        scale_factor_file_name = self._project_path.joinpath('sparse_scaled/scale_factor.txt')
+        np.savetxt(scale_factor_file_name, np.array([self.scale_factor]))
 
 
 if __name__ == '__main__':

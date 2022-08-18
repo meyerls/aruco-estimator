@@ -69,32 +69,13 @@ This repository is tested on Python 3.6+ and can be installed from [PyPi](https:
 pip install aruco-estimator
 ````
 
-### Source
-
-````angular2html
-git clone https://github.com/meyerls/aruco-estimator.git
-cd aruco-estimator
-git submodule update --init --recursive --jobs 0
-````
-
 ## Usage
 
-### Command Line
-
-````angular2html
-usage: scale_estimator.py [-h] [--colmap_project COLMAP_PROJECT]  [--visualize VISUALIZE]
-Estimate scale factor for COLMAP projects with aruco markers.
-
-optional arguments:
--h, --help                        show this help message and exit
---colmap_project COLMAP_PROJECT   Path to COLMAP project
---visualize VISUALIZE             Flag to enable visualization
-````
-
-To test the code on your local machine try the example project by using:
-
-````angular2html
-python scale_estimator.py --test_data
+### Dataset
+ A simple dataset of an aruco marker on a door is provided. It is automatically downloaded by using 
+````python
+dataset = download.Dataset()
+dataset.download_door_dataset()
 ````
 
 ### API
@@ -122,6 +103,34 @@ print('Point cloud and poses are scaled by: ', scale_factor)
 aruco_scale_factor.visualize_estimation(frustum_scale=0.2)
 o3d.io.write_point_cloud(os.path.join(dataset.colmap_project, 'scaled.ply'), dense)
 aruco_scale_factor.write_data()
+````
+
+## Source
+
+### Get Repo
+````angular2html
+git clone https://github.com/meyerls/aruco-estimator.git
+cd aruco-estimator
+git submodule update --init --recursive --jobs 0
+conda env create -f environment.yml
+```` 
+
+### Usage of Command Line
+
+````angular2html
+usage: scale_estimator.py [-h] [--colmap_project COLMAP_PROJECT]  [--visualize VISUALIZE]
+Estimate scale factor for COLMAP projects with aruco markers.
+
+optional arguments:
+-h, --help                        show this help message and exit
+--colmap_project COLMAP_PROJECT   Path to COLMAP project
+--visualize VISUALIZE             Flag to enable visualization
+````
+
+To test the code on your local machine try the example project by using:
+
+````angular2html
+python scale_estimator.py --test_data
 ````
 
 ### Visualization
