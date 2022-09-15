@@ -15,12 +15,8 @@ import os
 import open3d as o3d
 
 # Own modules
-try:
-    from aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
-    from aruco_estimator import download
-except ModuleNotFoundError:
-    from src.aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
-    from src.aruco_estimator import download
+from aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
+from aruco_estimator import download
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Estimate scale factor for COLMAP projects with aruco markers.')
@@ -32,7 +28,7 @@ if __name__ == '__main__':
                                                          'Depending on the number of points in the model. '
                                                          'Between 0.001 and 2', default=0.2)
     parser.add_argument('--frustum_size', type=float, help='Size of the visualized camera frustums. '
-                                                           'Between 0 (small) and 1 (large)', default=0.2)
+                                                           'Between 0 (small) and 1 (large)', default=0.75)
     parser.add_argument('--test_data', action='store_true', help='Download and try out test data')
     args = parser.parse_args()
 

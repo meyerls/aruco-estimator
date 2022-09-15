@@ -20,10 +20,7 @@ import open3d as o3d
 from PIL import Image
 
 # Own modules
-try:
-    from .colmap.src.colmap.visualization import *
-except ImportError:
-    from colmap.src.colmap.visualization import *
+from colmap_wrapper.visualization import *
 
 
 def ray_cast_aruco_corners_visualization(extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple,
