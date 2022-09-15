@@ -1,2 +1,2 @@
-recursive-include ./src/aruco_estimator *
-exclude ./src/data *
+recursive-include ./aruco_estimator *
+exclude ./data *
