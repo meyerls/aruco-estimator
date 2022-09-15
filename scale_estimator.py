@@ -15,12 +15,8 @@ import os
 import open3d as o3d
 
 # Own modules
-try:
-    from aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
-    from aruco_estimator import download
-except ModuleNotFoundError:
-    from src.aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
-    from src.aruco_estimator import download
+from aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
+from aruco_estimator import download
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Estimate scale factor for COLMAP projects with aruco markers.')

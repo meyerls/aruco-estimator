@@ -18,26 +18,13 @@ import numpy as np
 from tqdm import tqdm
 
 # Own modules
-try:
-    from colmap.src.colmap.colmap import COLMAP
-    from colmap.src.colmap.camera import Intrinsics
-    from colmap.src.colmap.bin import write_cameras_binary
-    from colmap.src.colmap.utils import convert_colmap_extrinsics
-    from colmap.src.colmap.visualization import *
-    from aruco import *
-    from opt import *
-    from base import *
-except ModuleNotFoundError:
-    from .colmap.src.colmap.colmap import COLMAP
-    from .colmap.src.colmap.camera import Intrinsics
-    from .colmap.src.colmap.bin import write_cameras_binary
-    from .colmap.src.colmap.utils import convert_colmap_extrinsics, generate_colmap_sparse_pc
-    from .colmap.src.colmap.visualization import *
-    from src.aruco_estimator.aruco import *
-    from src.aruco_estimator.opt import *
-    from src.aruco_estimator.base import *
-
-    pass
+from colmap_wrapper.colmap import COLMAP
+from colmap_wrapper.camera import Intrinsics
+from colmap_wrapper.bin import write_cameras_binary
+from colmap_wrapper.utils import convert_colmap_extrinsics, generate_colmap_sparse_pc
+from colmap_wrapper.visualization import *
+from .aruco import *
+from .opt import *
 
 DEBUG = False
 
