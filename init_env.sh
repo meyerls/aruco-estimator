@@ -9,8 +9,8 @@ conda create -y -n aruco_estimator
 
 conda activate aruco_estimator
 
-conda install python==3.8
-conda install pip
+conda install -y python==3.8
+conda install -y pip
 
 python3 -m pip install --upgrade pip
 pip install -r requirements.txt
