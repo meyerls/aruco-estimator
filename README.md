@@ -111,21 +111,27 @@ aruco_scale_factor.write_data()
 ````angular2html
 git clone https://github.com/meyerls/aruco-estimator.git
 cd aruco-estimator
-git submodule update --init --recursive --jobs 0
 conda env create -f environment.yml
 conda activate aruco_estimator
+pip install -r requirements.txt
 ```` 
 
 ### Usage of Command Line
 
 ````angular2html
-usage: scale_estimator.py [-h] [--colmap_project COLMAP_PROJECT]  [--visualize VISUALIZE]
+usage: scale_estimator.py [-h] [--colmap_project COLMAP_PROJECT] [--dense_model DENSE_MODEL] [--aruco_size ARUCO_SIZE] [--visualize] [--point_size POINT_SIZE] [--frustum_size FRUSTUM_SIZE] [--test_data]
+
 Estimate scale factor for COLMAP projects with aruco markers.
 
 optional arguments:
--h, --help                        show this help message and exit
---colmap_project COLMAP_PROJECT   Path to COLMAP project
---visualize VISUALIZE             Flag to enable visualization
+  -h, --help                             show this help message and exit
+  --colmap_project COLMAP_PROJECT        Path to COLMAP project
+  --dense_model DENSE_MODEL              name to the dense model
+  --aruco_size ARUCO_SIZE                Size of the aruco marker in cm.
+  --visualize                            Flag to enable visualization
+  --point_size POINT_SIZE                Point size of the visualized dense point cloud. Depending on the number of points in the model. Between 0.001 and 2
+  --frustum_size FRUSTUM_SIZE            Size of the visualized camera frustums. Between 0 (small) and 1 (large)
+  --test_data                            Download and try out test data
 ````
 
 To test the code on your local machine try the example project by using:

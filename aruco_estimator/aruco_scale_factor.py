@@ -121,6 +121,8 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         """
         COLMAP.__init__(self, project_path=project_path, dense_pc=dense_path)
 
+        self.aruco_marker_detected = None
+
         # Values to calculate 3D point of intersection
         self.images_scaled = None
         self.P0 = np.array([])
@@ -200,6 +202,12 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         if len(result) != len(self.images):
             raise ValueError("Thread return has not the same length as the input parameters!")
+
+        # Checks if all tuples in list are None
+        #if not all(all(v) for v in result):
+        #    self.aruco_marker_detected = False
+        #else:
+        #    self.aruco_marker_detected = True
 
         for image_idx in self.images.keys():
             self.images[image_idx].aruco_corners = result[image_idx - 1][0]
@@ -310,13 +318,17 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         self.start_visualizer(point_size=point_size, title='Aruco Scale Factor Estimation')
 
-    def run(self) -> np.ndarray:
+    def run(self) -> [np.ndarray, None]:
         """
         Starts the aruco extraction, ray casting and intersection of lines.
 
         :return:
         """
         self.__detect()
+
+        #if not self.aruco_marker_detected:
+        #    return self.aruco_marker_detected
+
         self.__ray_cast()
         self.aruco_corners_3d = intersect_parallelized(P0=self.P0.reshape(len(self.P0) // 3, 3),
                                                        N=self.N.reshape(len(self.N) // 12, 4, 3))

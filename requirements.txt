@@ -1,8 +1,8 @@
 numpy
-open3d==0.15.2
-opencv-contrib-python==4.6.0.66
-opencv-python==4.6.0.66
-pyquaternion==0.9.9
+open3d
+opencv-contrib-python
+pyquaternion
 matplotlib
-tqdm==4.64.0
-wget==3.2
+tqdm
+wget
+colmap_wrapper
