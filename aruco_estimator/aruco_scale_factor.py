@@ -204,9 +204,9 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
             raise ValueError("Thread return has not the same length as the input parameters!")
 
         # Checks if all tuples in list are None
-        #if not all(all(v) for v in result):
+        # if not all(all(v) for v in result):
         #    self.aruco_marker_detected = False
-        #else:
+        # else:
         #    self.aruco_marker_detected = True
 
         for image_idx in self.images.keys():
@@ -326,7 +326,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         """
         self.__detect()
 
-        #if not self.aruco_marker_detected:
+        # if not self.aruco_marker_detected:
         #    return self.aruco_marker_detected
 
         self.__ray_cast()
