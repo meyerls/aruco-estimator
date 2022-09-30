@@ -22,7 +22,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Estimate scale factor for COLMAP projects with aruco markers.')
     parser.add_argument('--colmap_project', type=str, help='Path to COLMAP project')
     parser.add_argument('--dense_model', type=str, help='name to the dense model', default='fused.ply')
-    parser.add_argument('--aruco_size', type=float, help='Size of the aruco marker in cm.', default=15)
+    parser.add_argument('--aruco_size', type=float, help='Size of the aruco marker in meter.', default=0.15)
     parser.add_argument('--visualize', action='store_true', help='Flag to enable visualization')
     parser.add_argument('--point_size', type=float, help='Point size of the visualized dense point cloud. '
                                                          'Depending on the number of points in the model. '
