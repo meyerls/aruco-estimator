@@ -398,6 +398,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
     def write_data(self):
 
+        pcd_scaled = self._project_path
         cameras_scaled = self._project_path.joinpath('sparse_scaled/cameras')
         images_scaled = self._project_path.joinpath('sparse_scaled/images')
         points_scaled = self._project_path.joinpath('sparse_scaled/points3D')
@@ -409,6 +410,8 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         for image_idx in self.images_scaled.keys():
             filename = images_scaled.joinpath('image_{:04d}.txt'.format(image_idx - 1))
             np.savetxt(filename, self.images[image_idx].extrinsics.flatten())
+
+        o3d.io.write_point_cloud(os.path.join(pcd_scaled, 'scaled.ply'), self.dense_scaled)
 
         # Save scale factor
         scale_factor_file_name = self._project_path.joinpath('sparse_scaled/scale_factor.txt')
