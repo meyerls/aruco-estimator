@@ -155,6 +155,7 @@ correctly the aruco settings must be changed according to the scene to be more r
 - [x] Make dataset available for download
 - [x] Put aruco marker detection in threads
 - [x] Scale poses of camera/extrinsics.
+- [ ] Up to know only SIMPLE_RADIAL and PINHOLE camera models are supported. Extend all models
 - [ ] Install CLI Tool vi PyPi
 - [ ] Up to now only one aruco marker per scene can be detected. Multiple aruco marker could improve the scale
   estimation

@@ -18,40 +18,38 @@ import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 from PIL import Image
-
 # Own modules
 from colmap_wrapper.visualization import *
 
 
-def ray_cast_aruco_corners_visualization(extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple,
-                                         corners3d: np.ndarray) \
+def ray_cast_aruco_corners_visualization(p_i: np.ndarray, n_i: np.ndarray, corners3d: np.ndarray) \
         -> o3d.pybind.geometry.LineSet:
-    """
+    '''
 
-    :param extrinsics:
-    :param intrinsics:
-    :param corners:
-    :return:
-    """
-    if corners == None:
-        return generate_line_set(points=[],
-                                 lines=[],
-                                 color=[1, 0, 0])
-
-    p0, rays_norm = ray_cast_aruco_corners(extrinsics, intrinsics, corners)
+    @param p_i:
+    @param n_i:
+    @param corners3d:
+    @return:
+    '''
 
     p1_0, p1_1, p1_2, p1_3 = corners3d[0], corners3d[1], corners3d[2], corners3d[3]
-    t_0 = np.mean((p1_0 - p0) / rays_norm[0])
-    t_1 = np.mean((p1_1 - p0) / rays_norm[1])
-    t_2 = np.mean((p1_2 - p0) / rays_norm[2])
-    t_3 = np.mean((p1_3 - p0) / rays_norm[3])
+    t_0 = np.linalg.norm((p1_0 - p_i))
+    t_1 = np.linalg.norm((p1_1 - p_i))
+    t_2 = np.linalg.norm((p1_2 - p_i))
+    t_3 = np.linalg.norm((p1_3 - p_i))
+
+
+    #t_0 = np.mean((p1_0 - p_i) / n_i[0])
+    #t_1 = np.mean((p1_1 - p_i) / n_i[1])
+    #t_2 = np.mean((p1_2 - p_i) / n_i[2])
+    #t_3 = np.mean((p1_3 - p_i) / n_i[3])
 
     points_camera_plane = [
-        p0,
-        p0 + rays_norm[0] * t_0,  # p1_0,
-        p0 + rays_norm[1] * t_1,  # p1_1,
-        p0 + rays_norm[2] * t_2,  # p1_2,
-        p0 + rays_norm[3] * t_3,  # p1_3,
+        p_i,
+        p_i + n_i[0] * t_0,  # p1_0,
+        p_i + n_i[1] * t_1,  # p1_1,
+        p_i + n_i[2] * t_2,  # p1_2,
+        p_i + n_i[3] * t_3,  # p1_3,
     ]
 
     lines = [
@@ -78,12 +76,12 @@ def ray_cast_aruco_corners(extrinsics: np.ndarray, intrinsics: np.ndarray, corne
     :param corners:
     :return:
     '''
-    R, p0 = extrinsics[:3, :3], extrinsics[:3, 3]
+    R, camera_origin = extrinsics[:3, :3], extrinsics[:3, 3]
     aruco_corners = np.concatenate((corners[0][0], np.ones((4, 1))), axis=1)
     rays = aruco_corners @ np.linalg.inv(intrinsics).T @ R.T
     rays_norm = rays / np.linalg.norm(rays, ord=2, axis=1, keepdims=True)
 
-    return p0, rays_norm
+    return camera_origin, rays_norm
 
 
 def load_image(image_path: str) -> np.ndarray:
@@ -176,13 +174,38 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
         return None, None
 
     if False:
-        plt.figure()
-        plt.imshow(gray, cmap='gray')
-        for i in range(len(aruco_id)):
-            c = corners[i][0]
-            plt.plot([c[:, 0].mean()], [c[:, 1].mean()], "o", label="id={0}".format(aruco_id[i]))
-        plt.legend()
-        plt.show()
+        if len(corners) > 0:
+            # flatten the ArUco IDs list
+            ids = aruco_id.flatten()
+            # loop over the detected ArUCo corners
+            for (markerCorner, markerID) in zip(corners, ids):
+                # extract the marker corners (which are always returned in
+                # top-left, top-right, bottom-right, and bottom-left order)
+                corners_plot = markerCorner.reshape((4, 2))
+                (topLeft, topRight, bottomRight, bottomLeft) = corners_plot
+                # convert each of the (x, y)-coordinate pairs to integers
+                topRight = (int(topRight[0]), int(topRight[1]))
+                bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
+                bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
+                topLeft = (int(topLeft[0]), int(topLeft[1]))
+
+                # draw the bounding box of the ArUCo detection
+                cv2.line(image, topLeft, topRight, (0, 255, 0), 5)
+                cv2.line(image, topRight, bottomRight, (0, 255, 0), 5)
+                cv2.line(image, bottomRight, bottomLeft, (0, 255, 0), 5)
+                cv2.line(image, bottomLeft, topLeft, (0, 255, 0), 5)
+                # compute and draw the center (x, y)-coordinates of the ArUco
+                # marker
+                cX = int((topLeft[0] + bottomRight[0]) / 2.0)
+                cY = int((topLeft[1] + bottomRight[1]) / 2.0)
+                cv2.circle(image, (cX, cY), 4, (0, 0, 255), 5)
+                # draw the ArUco marker ID on the image
+                cv2.putText(image, str(markerID),
+                            (topLeft[0], topLeft[1] - 15), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.5, (0, 255, 0), 10)
+
+                plt.imshow(image, cmap='gray')
+                plt.show()
 
     del gray
     del image

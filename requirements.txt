@@ -7,3 +7,4 @@ wget==3.2
 pyquaternion==0.9.9
 pyransac3d==0.6.0
 colmap-wrapper
+pycolmap
