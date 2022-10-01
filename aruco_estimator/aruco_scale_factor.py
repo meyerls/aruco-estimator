@@ -14,15 +14,12 @@ from functools import wraps
 from multiprocessing import Pool
 
 # Libs
-import numpy as np
 from tqdm import tqdm
-
 # Own modules
 from colmap_wrapper.colmap import COLMAP
-from colmap_wrapper.camera import Intrinsics
-from colmap_wrapper.bin import write_cameras_binary
-from colmap_wrapper.utils import convert_colmap_extrinsics, generate_colmap_sparse_pc
+from colmap_wrapper.utils import generate_colmap_sparse_pc
 from colmap_wrapper.visualization import *
+
 from .aruco import *
 from .opt import *
 
@@ -140,7 +137,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         # Multi Processing
         self.progress_bar = True
-        self.num_processes = 8 if os.cpu_count() > 8 else os.cpu_count()
+        self.num_processes = 1  # 8 if os.cpu_count() > 8 else os.cpu_count()
         print('Num process: ', self.num_processes)
         self.image_names = []
         # Prepare parsed data for multi processing
@@ -152,39 +149,23 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         else:
             self.aruco_size = None
 
-    def __ray_cast(self):
+    def run(self) -> [np.ndarray, None]:
         """
-        This function casts a ray from the origin of the camera center C_i (also the translational part of the extrinsic
-        matrix) through the detected aruco corners in the image coordinates x = (x,y,1) which direction is defined
-        trough n = x @ K^-1 @ R.T. K^-1 is the inverse of the intrinsic matrix and R is the extrinsic matrix
-        (only rotation) of the current frame. Afterwards the origin C_i and the normalized direction vector for all
-        aruco corners are saved.
+        Starts the aruco extraction, ray casting and intersection of lines.
 
         :return:
         """
-        for image_idx in self.images.keys():
-            if self.images[image_idx].aruco_corners is not None:
-                p0, n = ray_cast_aruco_corners(extrinsics=self.images[image_idx].extrinsics,
-                                               intrinsics=self.images[image_idx].intrinsics.K,
-                                               corners=self.images[image_idx].aruco_corners)
+        self.__detect()
 
-                self.P0 = np.append(self.P0, p0)
-                self.N = np.append(self.N, n)
+        # if not self.aruco_marker_detected:
+        #    return self.aruco_marker_detected
 
-    @staticmethod
-    def __evaluate(aruco_corners_3d: np.ndarray) -> np.ndarray:
-        """
-        Calculates the L2 norm between every neighbouring aruco corner. Finally the distances are averaged and returned
+        self.__ray_cast()
+        self.aruco_corners_3d = intersect_parallelized(P0=self.P0.reshape(len(self.P0) // 3, 3),
+                                                       N=self.N.reshape(len(self.N) // 12, 4, 3))
+        self.aruco_distance = self.__evaluate(self.aruco_corners_3d)
 
-        :return:
-        """
-        dist1 = np.linalg.norm(aruco_corners_3d[0] - aruco_corners_3d[1])
-        dist2 = np.linalg.norm(aruco_corners_3d[1] - aruco_corners_3d[2])
-        dist3 = np.linalg.norm(aruco_corners_3d[2] - aruco_corners_3d[3])
-        dist4 = np.linalg.norm(aruco_corners_3d[3] - aruco_corners_3d[0])
-
-        # Average
-        return np.mean([dist1, dist2, dist3, dist4])
+        return self.aruco_distance
 
     @timeit
     def __detect(self):
@@ -214,6 +195,42 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
             self.images[image_idx].aruco_id = result[image_idx - 1][1]
             self.images[image_idx].image_path = self.image_names[image_idx - 1]
             # self.images[image_idx].image = cv2.resize(result[image_idx - 1][2], (0, 0), fx=0.3, fy=0.3)
+
+    def __ray_cast(self):
+        """
+        This function casts a ray from the origin of the camera center C_i (also the translational part of the extrinsic
+        matrix) through the detected aruco corners in the image coordinates x = (x,y,1) which direction is defined
+        trough n = x @ K^-1 @ R.T. K^-1 is the inverse of the intrinsic matrix and R is the extrinsic matrix
+        (only rotation) of the current frame. Afterwards the origin C_i and the normalized direction vector for all
+        aruco corners are saved.
+
+        :return:
+        """
+        for image_idx in self.images.keys():
+            if self.images[image_idx].aruco_corners is not None:
+                p0, n = ray_cast_aruco_corners(extrinsics=self.images[image_idx].extrinsics,
+                                               intrinsics=self.images[image_idx].intrinsics.K,
+                                               corners=self.images[image_idx].aruco_corners)
+                self.images[image_idx].p0 = p0
+                self.images[image_idx].n = n
+
+                self.P0 = np.append(self.P0, p0)
+                self.N = np.append(self.N, n)
+
+    @staticmethod
+    def __evaluate(aruco_corners_3d: np.ndarray) -> np.ndarray:
+        """
+        Calculates the L2 norm between every neighbouring aruco corner. Finally the distances are averaged and returned
+
+        :return:
+        """
+        dist1 = np.linalg.norm(aruco_corners_3d[0] - aruco_corners_3d[1])
+        dist2 = np.linalg.norm(aruco_corners_3d[1] - aruco_corners_3d[2])
+        dist3 = np.linalg.norm(aruco_corners_3d[2] - aruco_corners_3d[3])
+        dist4 = np.linalg.norm(aruco_corners_3d[3] - aruco_corners_3d[0])
+
+        # Average
+        return np.mean([dist1, dist2, dist3, dist4])
 
     def visualize_scaled_scene(self, frustum_scale: float = 0.15, point_size: float = 1., sphere_size: float = 0.01):
         """
@@ -290,13 +307,23 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         @param sphere_size:
         """
 
-        self.add_colmap_reconstruction_geometries(frustum_scale=frustum_scale)
+        # Add Dense & sparse Model to scene
+        self.add_colmap_dense2geometrie()
+        self.add_colmap_sparse2geometrie()
+        # Add camera frustums to scene
+        self.add_colmap_frustums2geometrie(frustum_scale=frustum_scale)
 
         for image_idx in self.images.keys():
-            aruco_line_set = ray_cast_aruco_corners_visualization(extrinsics=self.images[image_idx].extrinsics,
-                                                                  intrinsics=self.images[image_idx].intrinsics.K,
-                                                                  corners=self.images[image_idx].aruco_corners,
-                                                                  corners3d=self.aruco_corners_3d)
+
+            if self.images[image_idx].aruco_corners == None:
+                aruco_line_set = generate_line_set(points=[],
+                                                   lines=[],
+                                                   color=[1, 0, 0])
+            else:
+                aruco_line_set = ray_cast_aruco_corners_visualization(
+                    p_i=self.images[image_idx].p0,
+                    n_i=self.images[image_idx].n,
+                    corners3d=self.aruco_corners_3d)
 
             self.geometries.append(aruco_line_set)
 
@@ -317,24 +344,6 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         self.geometries.extend(aruco_sphere)
 
         self.start_visualizer(point_size=point_size, title='Aruco Scale Factor Estimation')
-
-    def run(self) -> [np.ndarray, None]:
-        """
-        Starts the aruco extraction, ray casting and intersection of lines.
-
-        :return:
-        """
-        self.__detect()
-
-        # if not self.aruco_marker_detected:
-        #    return self.aruco_marker_detected
-
-        self.__ray_cast()
-        self.aruco_corners_3d = intersect_parallelized(P0=self.P0.reshape(len(self.P0) // 3, 3),
-                                                       N=self.N.reshape(len(self.N) // 12, 4, 3))
-        self.aruco_distance = self.__evaluate(self.aruco_corners_3d)
-
-        return self.aruco_distance
 
     def analyze(self, true_scale):
         """
@@ -398,6 +407,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
     def write_data(self):
 
+        pcd_scaled = self._project_path
         cameras_scaled = self._project_path.joinpath('sparse_scaled/cameras')
         images_scaled = self._project_path.joinpath('sparse_scaled/images')
         points_scaled = self._project_path.joinpath('sparse_scaled/points3D')
@@ -409,6 +419,8 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         for image_idx in self.images_scaled.keys():
             filename = images_scaled.joinpath('image_{:04d}.txt'.format(image_idx - 1))
             np.savetxt(filename, self.images[image_idx].extrinsics.flatten())
+
+        o3d.io.write_point_cloud(os.path.join(pcd_scaled, 'scaled.ply'), self.dense_scaled)
 
         # Save scale factor
         scale_factor_file_name = self._project_path.joinpath('sparse_scaled/scale_factor.txt')

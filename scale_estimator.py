@@ -9,14 +9,12 @@ See LICENSE file for more information.
 
 # Built-in/Generic Imports
 import argparse
-import os
-
-# Libs
-import open3d as o3d
 
 # Own modules
 from aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
 from aruco_estimator import download
+
+# Libs
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Estimate scale factor for COLMAP projects with aruco markers.')
@@ -47,11 +45,12 @@ if __name__ == '__main__':
     # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
     aruco_scale_factor = ArucoScaleFactor(project_path=args.colmap_project, dense_path=args.dense_model)
     aruco_distance = aruco_scale_factor.run()
-    print('Mean distance between aruco markers: ', aruco_distance)
+    print('Size of the unscaled aruco markers: ', aruco_distance)
 
     # Calculate scaling factor and apply to scene
     dense, scale_factor = aruco_scale_factor.apply(true_scale=args.aruco_size)
     print('Point cloud and poses are scaled by: ', scale_factor)
+    print('Size of the scaled (true to scale) aruco markers in meters: ', aruco_distance * scale_factor)
 
     if DEBUG:
         aruco_scale_factor.visualize_scaled_scene()
@@ -63,5 +62,4 @@ if __name__ == '__main__':
 
     # aruco_scale_factor._ArucoScaleFactor__visualization_scaled_scene(frustum_scale=0.2)
     # Todo: Save output, PCD and poses. Visualize!
-    o3d.io.write_point_cloud(os.path.join(args.colmap_project, 'scaled.ply'), dense)
     aruco_scale_factor.write_data()

@@ -93,11 +93,12 @@ dataset.download_door_dataset()
 # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
 aruco_scale_factor = ArucoScaleFactor(project_path=dataset.dataset_path)
 aruco_distance = aruco_scale_factor.run()
-print('Mean distance between aruco markers: ', aruco_distance)
+print('Size of the unscaled aruco markers: ', aruco_distance)
 
 # Calculate scaling factor, apply it to the scene and save scaled point cloud
 dense, scale_factor = aruco_scale_factor.apply(true_scale=dataset.scale)  # scale in cm
 print('Point cloud and poses are scaled by: ', scale_factor)
+print('Size of the scaled (true to scale) aruco markers in meters: ', aruco_distance * scale_factor)
 
 # Visualization of the scene and rays BEFORE scaling. This might be necessary for debugging
 aruco_scale_factor.visualize_estimation(frustum_scale=0.2)
@@ -155,6 +156,7 @@ correctly the aruco settings must be changed according to the scene to be more r
 - [x] Make dataset available for download
 - [x] Put aruco marker detection in threads
 - [x] Scale poses of camera/extrinsics.
+- [ ] Up to know only SIMPLE_RADIAL and PINHOLE camera models are supported. Extend all models
 - [ ] Install CLI Tool vi PyPi
 - [ ] Up to now only one aruco marker per scene can be detected. Multiple aruco marker could improve the scale
   estimation
