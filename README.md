@@ -1,6 +1,7 @@
 <p align="center" width="100%">
-    <img width="100%" src="https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/wood.png">
+    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/dev/img/wood.png?raw=true">
 </p>
+
 # Automatic Aruco marker-based scale factor estimation (Work in Progress!)
 
 <a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/aruco-estimator"></a>
@@ -21,7 +22,7 @@ This project aims to automatically compute the correct scale of a point cloud ge
 with [COLMAP](https://colmap.github.io/) by placing an aruco marker into the scene.
 
 <p align="center" width="100%">
-    <img width="100%" src="https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/output.gif">
+    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/dev/img/output.gif?raw=true">
 </p>
 
 ## Installation
