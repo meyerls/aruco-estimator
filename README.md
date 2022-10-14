@@ -21,10 +21,6 @@
 This project aims to automatically compute the correct scale of a point cloud generated
 with [COLMAP](https://colmap.github.io/) by placing an aruco marker into the scene.
 
-<p align="center" width="100%">
-    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/dev/img/output.gif?raw=true">
-</p>
-
 ## Installation
 
 ### PyPi
@@ -126,9 +122,13 @@ To test the code on your local machine try the example project by using:
 ````angular2html
 python scale_estimator.py --test_data
 ````
+<p align="center" width="100%">
+    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/dev/img/door.png?raw=true">
+</p>
 
-![](https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/door.png)
-
+<p align="center" width="100%">
+    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/dev/img/output.gif?raw=true">
+</p>
 
 ## Limitation / Improvements
 
