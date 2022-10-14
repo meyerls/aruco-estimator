@@ -1,6 +1,7 @@
-![](https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/header.png)
-
-# Aruco Scale Factor Estimation for COLMAP (Work in Progress!)
+<p align="center" width="100%">
+    <img width="100%" src="https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/wood.png">
+</p>
+# Automatic Aruco marker-based scale factor estimation (Work in Progress!)
 
 <a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/aruco-estimator"></a>
 <a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aruco-estimator"></a>
@@ -17,46 +18,11 @@
 ## About
 
 This project aims to automatically compute the correct scale of a point cloud generated
-with  [COLMAP](https://colmap.github.io/). By adding an aruco marker with into the scene it is possible to overcome the 
-scale ambiguity from monocular SfM and SLAM. In the literature it is commonly suggested to manually measure a known 
-distance of a calibration object in the 3D reconstruction and then scale  the reconstruction accordingly or make photos 
-from two known positions[1]. Since there is unfortunately no automated approach to calculate an accurate scaling factor,
-this project aims to be attached as a post processing step to the reconstruction process.
+with [COLMAP](https://colmap.github.io/) by placing an aruco marker into the scene.
 
-## Setup
-
-Before taking the images for the reconstruction, an aruco marker must be printed out. Care should be taken to ensure
-that the size of the marker fits the scene to be recognizable in the images. Additionally the marker is placed on a
-planar surface and does not have curvature (otherwise, the marker will be recognized incorrectly or not at all). The
-aruco marker can either be generated
-with [ ArUco-markers-with-OpenCV-and-Python](https://github.com/KhairulIzwan/ArUco-markers-with-OpenCV-and-Python) or
-generated easily on [this website](https://chev.me/arucogen/). When taking the images, make sure that the aruco marker
-is visible in at least two images; otherwise, no solution exists. It is advisable to have at least five images with the
-aruco marker for an accurate solution (two pictures should already be enough for a sufficient approximation. However,
-blurry images or aruco markers that are too small could falsify the result).
-After the images have been acquired, the reconstructions process can be carried out using COLMAP. For the algorithm to
-work it only needs the result of the Structure from Motion part (extrinsic parameters). The MVS part for the dense
-reconstruction is used to visually verify the result.
-
-<!-- ## Theory
-
-At first the extrinsic <img src="https://render.githubusercontent.com/render/math?math=\mathbf{M}_i"> and intrinsic
-paramters <img src="https://render.githubusercontent.com/render/math?math=\mathbf{K}_i"> for every
-image <img src="https://render.githubusercontent.com/render/math?math=\mathbf{I}_i"> of the reconstruction are readout
-from the parsed COLMAP project and their underlying [binary output format](https://colmap.github.io/format.html). Then,
-in each image <img src="https://render.githubusercontent.com/render/math?math=\mathbf{I}_i">, it is checked whether an
-Arco marker is present. If so, all four corners of the square Aruco markers are extracted as image
-coordinates <img src="https://render.githubusercontent.com/render/math?math=\mathbf{x} = (x_i, y_i, 1)^\top">. Thus it
-is possible to cast a ray from the origin of the camera center
-<img src="https://render.githubusercontent.com/render/math?math=\mathbf{C}_i">
-through all four Aruco corners trough two points according to
-<img src="https://render.githubusercontent.com/render/math?math=r_{vec} = \mathbf{C}_i + ||\mathbf{x} \mathbf{K}^{-1} ||_2^2 \mathbf{R}_i \lambda">
-with <img src="https://render.githubusercontent.com/render/math?math=\lambda \in [-\infty, +\infty]">  . Here x is the
-image coordinate in homogeneous coordinates, K^-1 is the inverse matrix of the intrinsic matrix of the camera, R_i the
-rotation of the extrinsic camera parameters and C_i the translation t_i of the camera pose. Four rays are cast for each
-image in which an aruco marker is detected. Thus, with a minimum of two rays per aruco corner, the position in 3D space
-can be determined trough the intersection of lines. The intersection of several 3D lines can then be calculated using a
-least-squares method [2].-->
+<p align="center" width="100%">
+    <img width="100%" src="https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/output.gif">
+</p>
 
 ## Installation
 
@@ -72,13 +38,25 @@ pip install aruco-estimator
 ## Usage
 
 ### Dataset
- A simple dataset of an aruco marker on a door is provided. It is automatically downloaded by using 
+
+An exemplary data set is provided. The dataset shows a simple scene of a door with an aruco marker. Other dataset might
+follow in future work. It can be downloaded by using
+
 ````python
+from aruco_estimator import download
+
 dataset = download.Dataset()
-dataset.download_door_dataset()
+dataset.download_door_dataset(output_path='.')
 ````
 
 ### API
+
+A use of the code on the provided dataset can be seen in the following block. The most important function is 
+``aruco_scale_factor.run()``. Here, an aruco marker is searched for in each image. If a marker is found in at 
+least 2 images, the position of the aruco corner in 3D is calculated based on the camera poses and the corners of 
+the aruco maker.Based on the positions of the corners of the square aruco marker, the size of the marker in the unscaled 
+reconstruction can be determined. With the correct metric size of the marker, the scene can be scaled true to scale 
+using ``aruco_scale_factor.apply(true_scale)``. 
 
 ````python
 from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
@@ -101,21 +79,28 @@ print('Point cloud and poses are scaled by: ', scale_factor)
 print('Size of the scaled (true to scale) aruco markers in meters: ', aruco_distance * scale_factor)
 
 # Visualization of the scene and rays BEFORE scaling. This might be necessary for debugging
-aruco_scale_factor.visualize_estimation(frustum_scale=0.2)
+aruco_scale_factor.visualize_estimation(frustum_scale=0.4)
 o3d.io.write_point_cloud(os.path.join(dataset.colmap_project, 'scaled.ply'), dense)
 aruco_scale_factor.write_data()
 ````
 
 ## Source
 
-### Get Repo
+If you want to install the repo from source make sure that conda is installed. Afterwards clone this repository, give
+the bash file executable rights and install the conda env:
+
 ````angular2html
 git clone https://github.com/meyerls/aruco-estimator.git
 cd aruco-estimator
-conda env create -f environment.yml
-conda activate aruco_estimator
-pip install -r requirements.txt
+chmod u+x init_env.sh
+./init_env.sh
 ```` 
+
+Finally install all python dependencies in the activated conda environment via
+
+````angular2html
+pip install -r requirements.txt
+````
 
 ### Usage of Command Line
 
@@ -125,14 +110,14 @@ usage: scale_estimator.py [-h] [--colmap_project COLMAP_PROJECT] [--dense_model 
 Estimate scale factor for COLMAP projects with aruco markers.
 
 optional arguments:
-  -h, --help                             show this help message and exit
-  --colmap_project COLMAP_PROJECT        Path to COLMAP project
-  --dense_model DENSE_MODEL              name to the dense model
-  --aruco_size ARUCO_SIZE                Size of the aruco marker in cm.
-  --visualize                            Flag to enable visualization
-  --point_size POINT_SIZE                Point size of the visualized dense point cloud. Depending on the number of points in the model. Between 0.001 and 2
-  --frustum_size FRUSTUM_SIZE            Size of the visualized camera frustums. Between 0 (small) and 1 (large)
-  --test_data                            Download and try out test data
+-h, --help                             show this help message and exit
+--colmap_project COLMAP_PROJECT        Path to COLMAP project
+--dense_model DENSE_MODEL              name to the dense model
+--aruco_size ARUCO_SIZE                Size of the aruco marker in cm.
+--visualize                            Flag to enable visualization
+--point_size POINT_SIZE                Point size of the visualized dense point cloud. Depending on the number of points in the model. Between 0.001 and 2
+--frustum_size FRUSTUM_SIZE            Size of the visualized camera frustums. Between 0 (small) and 1 (large)
+--test_data                            Download and try out test data
 ````
 
 To test the code on your local machine try the example project by using:
@@ -141,42 +126,46 @@ To test the code on your local machine try the example project by using:
 python scale_estimator.py --test_data
 ````
 
-### Visualization
+![](https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/door.png)
 
-The visualization is suitable for displaying the scene, the camera frustums, and the casted rays. It is usefull to check
-whether the corners of the aruco marker are detected and positioned correctly. If the aruco markers are not detected
-correctly the aruco settings must be changed according to the scene to be more robust.
 
-![](https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/visualization.png)
+## Limitation / Improvements
 
-## Limitation/Improvements
-
-- [x] Make package for PyPi
-- [x] Upload to PyPi during CI
-- [x] Make dataset available for download
-- [x] Put aruco marker detection in threads
-- [x] Scale poses of camera/extrinsics.
-- [ ] Up to know only SIMPLE_RADIAL and PINHOLE camera models are supported. Extend all models
+- [ ] Up to now only SIMPLE_RADIAL and PINHOLE camera models are supported. Extend all models
 - [ ] Install CLI Tool vi PyPi
 - [ ] Up to now only one aruco marker per scene can be detected. Multiple aruco marker could improve the scale
   estimation
-- [ ] Different aruco marker settings should be investigated for different scenarios to make it either more robust to
+- [ ] Different aruco marker settings and marker types should be investigated for different scenarios to make it either more robust to
   false detections
 - [ ] Geo referencing of aruco markers with earth coordinate system using GPS or RTK
-- [ ] Alternatives to aruco marker should be investigated.
-- [ ] Are the corners from the aruco marker returned identical regarding the orientation in the image?
+- [ ] Only COLMAP is supported. Add additional reconstruction software.
 
 ## Acknowledgement
 
-The Code to read out the binary COLMAP data is partly borrowed from the
+* The Code to read out the binary COLMAP data is partly borrowed from the
 repo [COLMAP Utility Scripts](https://github.com/uzh-rpg/colmap_utils) by [uzh-rpg](https://github.com/uzh-rpg).
+* The visualization of the wooden block is created from the dataset found in [[1](https://robocip-aist.github.io/sii_nerf_scans/)]
 
 ## Trouble Shooting
 
 - In some cases cv2 does not detect the aruco marker module. Reinstalling opencv-python and opencv-python-python might
   help [Source](https://stackoverflow.com/questions/45972357/python-opencv-aruco-no-module-named-cv2-aruco)
 
-## Resources
+## References
 
-<div class="csl-entry">[1] Lourakis, M., &#38; Zabulis, X. (n.d.). <i>LNCS 8047 - Accurate Scale Factor Estimation in 3D Reconstruction</i>. 2013</div>
-<div class="csl-entry">[2] Traa, J., <i>Least-Squares Intersection of Lines</i>. 2013</div>
+<div class="csl-entry">[1] Erich, F., Bourreau, B., <i>Neural Scanning: Rendering and determining geometry of household objects using Neural Radiance Fields</i> <a href="https://robocip-aist.github.io/sii_nerf_scans/">Link</a>. 2022</div>
+
+## Citation
+
+Please cite this paper, if this work helps you with your research:
+
+```
+@InProceedings{ ,
+  author="H",
+  title="",
+  booktitle="",
+  year="",
+  pages="",
+  isbn=""
+}
+```
