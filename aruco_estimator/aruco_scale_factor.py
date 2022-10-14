@@ -137,7 +137,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         # Multi Processing
         self.progress_bar = True
-        self.num_processes = 1  # 8 if os.cpu_count() > 8 else os.cpu_count()
+        self.num_processes = 8 if os.cpu_count() > 8 else os.cpu_count()
         print('Num process: ', self.num_processes)
         self.image_names = []
         # Prepare parsed data for multi processing
@@ -232,73 +232,6 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         # Average
         return np.mean([dist1, dist2, dist3, dist4])
 
-    def visualize_scaled_scene(self, frustum_scale: float = 0.15, point_size: float = 1., sphere_size: float = 0.01):
-        """
-        This visualization function show the scaled dense and scaled extrinsic parameters.
-
-
-        @param sphere_size:
-        @param frustum_scale:
-        @param point_size:
-        """
-
-        geometries = [self.dense_scaled]
-
-        for image_idx in self.images_scaled.keys():
-            line_set, sphere, mesh = draw_camera_viewport(extrinsics=self.images_scaled[image_idx].extrinsics,
-                                                          intrinsics=self.images_scaled[image_idx].intrinsics.K,
-                                                          image=self.images_scaled[image_idx].image,
-                                                          scale=frustum_scale)
-
-            # aruco_line_set = ray_cast_aruco_corners_visualization(extrinsics=M,
-            #                                                      intrinsics=camera_intrinsics.K,
-            #                                                      corners=self.images[image_idx].aruco_corners)
-
-            # geometries.append(aruco_line_set)
-            geometries.append(mesh)
-            geometries.append(line_set)
-            geometries.extend(sphere)
-
-        aruco_sphere = create_sphere_mesh(t=self.aruco_corners_3d * self.scale_factor,
-                                          color=[[0, 0, 0],
-                                                 [1, 0, 0],
-                                                 [0, 0, 1],
-                                                 [1, 1, 1]],
-                                          radius=sphere_size)
-        aruco_rect = generate_line_set(points=[self.aruco_corners_3d[0] * self.scale_factor,
-                                               self.aruco_corners_3d[1] * self.scale_factor,
-                                               self.aruco_corners_3d[2] * self.scale_factor,
-                                               self.aruco_corners_3d[3] * self.scale_factor],
-                                       lines=[[0, 1], [1, 2], [2, 3], [3, 0]], color=[1, 0, 0])
-
-        '''
-        # Plot/show text of distance in 3 Reco. Currently not working as text is rotated wrongly. tbd!
-
-        pos_text = (self.aruco_corners_3d[0] + (
-                    self.aruco_corners_3d[1] - self.aruco_corners_3d[0]) / 2) * self.scale_factor
-        pcd_tree = o3d.geometry.KDTreeFlann(self.dense_scaled)
-        [k, idx, _] = pcd_tree.search_knn_vector_3d(pos_text, 100)
-
-        dir_vec = []
-        for i in idx:
-            dir_vec.append(self.dense_scaled.normals[i])
-        dir_vec = np.asarray(dir_vec).mean(axis=0)
-
-        dist = np.linalg.norm(
-            self.aruco_corners_3d[0] * self.scale_factor - self.aruco_corners_3d[1] * self.scale_factor)
-        pcd_text = text_3d(text='{:.4f} cm'.format(dist*100),
-                           pos=pos_text,
-                           direction=dir_vec)
-        geometries.append(pcd_text)
-
-        '''
-
-        geometries.extend(aruco_sphere)
-        geometries.append(aruco_rect)
-
-        self.start_visualizer_scaled(geometries=geometries, point_size=point_size,
-                                     title='Aruco Scale Factor Estimation Scaled')
-
     def visualize_estimation(self, frustum_scale: float = 1, point_size: float = 1., sphere_size: float = 0.02):
         """
 
@@ -308,8 +241,9 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         """
 
         # Add Dense & sparse Model to scene
-        self.add_colmap_dense2geometrie()
-        self.add_colmap_sparse2geometrie()
+        dense_exists = self.add_colmap_dense2geometrie()
+        if not dense_exists:
+            self.add_colmap_sparse2geometrie()
         # Add camera frustums to scene
         self.add_colmap_frustums2geometrie(frustum_scale=frustum_scale)
 

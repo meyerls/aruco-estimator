@@ -38,12 +38,6 @@ def ray_cast_aruco_corners_visualization(p_i: np.ndarray, n_i: np.ndarray, corne
     t_2 = np.linalg.norm((p1_2 - p_i))
     t_3 = np.linalg.norm((p1_3 - p_i))
 
-
-    #t_0 = np.mean((p1_0 - p_i) / n_i[0])
-    #t_1 = np.mean((p1_1 - p_i) / n_i[1])
-    #t_2 = np.mean((p1_2 - p_i) / n_i[2])
-    #t_3 = np.mean((p1_3 - p_i) / n_i[3])
-
     points_camera_plane = [
         p_i,
         p_i + n_i[0] * t_0,  # p1_0,
