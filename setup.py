@@ -16,7 +16,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
     name='aruco-estimator',
-    version='1.1.5',
+    version='1.1.6',
     description='Aruco Scale Factor Estimation',
     license="MIT",
     long_description=long_description,
@@ -31,9 +31,11 @@ setuptools.setup(
                       "open3d",
                       "opencv-contrib-python",
                       "pyquaternion",
+                      "pycolmap",
                       "tqdm",
                       "wget"],  # external packages as dependencies
     classifiers=[
+        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         "License :: OSI Approved :: MIT License",
