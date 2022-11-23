@@ -2,7 +2,7 @@
     <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/dev/img/wood.png?raw=true">
 </p>
 
-# Automatic Aruco marker-based scale factor estimation (Work in Progress!)
+# Automatic Estimation of the Scale Factor Based on Aruco Markers (Work in Progress!)
 
 <a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/aruco-estimator"></a>
 <a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aruco-estimator"></a>
@@ -71,7 +71,7 @@ aruco_distance = aruco_scale_factor.run()
 print('Size of the unscaled aruco markers: ', aruco_distance)
 
 # Calculate scaling factor, apply it to the scene and save scaled point cloud
-dense, scale_factor = aruco_scale_factor.apply(true_scale=dataset.scale)  # scale in cm
+dense, scale_factor = aruco_scale_factor.apply(true_scale=dataset.scale)  # scale in m
 print('Point cloud and poses are scaled by: ', scale_factor)
 print('Size of the scaled (true to scale) aruco markers in meters: ', aruco_distance * scale_factor)
 
