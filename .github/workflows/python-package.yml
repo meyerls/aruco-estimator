@@ -23,7 +23,7 @@ jobs:
       - name: 'Test PC Skeletor'
         run: |
           ls -la 
-          python3 scale_estimator --test_data
+          python3 scale_estimator.py --test_data
           ls -la ${{ github.workspace }}
           pwd
       - name: 'Upload Artifact'
