@@ -22,8 +22,8 @@ jobs:
           pip install .
       - name: 'Test PC Skeletor'
         run: |
-          python scale_estimator --test_data
           ls -la 
+          python3 scale_estimator --test_data
           ls -la ${{ github.workspace }}
           pwd
       - name: 'Upload Artifact'
