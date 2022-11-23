@@ -13,10 +13,3 @@
 # COLMAP
 *.ply filter=lfs diff=lfs merge=lfs -text
 *.bin filter=lfs diff=lfs merge=lfs -text
-img/wood_orig.jpg filter=lfs diff=lfs merge=lfs -text
-img/wood.png filter=lfs diff=lfs merge=lfs -text
-img/wood_reco.png filter=lfs diff=lfs merge=lfs -text
-img/door.png filter=lfs diff=lfs merge=lfs -text
-img/header.png filter=lfs diff=lfs merge=lfs -text
-img/output.gif filter=lfs diff=lfs merge=lfs -text
-img/visualization.png filter=lfs diff=lfs merge=lfs -text
