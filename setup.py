@@ -31,6 +31,7 @@ setuptools.setup(
                       "open3d",
                       "opencv-contrib-python",
                       "pyquaternion",
+                      "pycolmap",
                       "tqdm",
                       "wget"],  # external packages as dependencies
     classifiers=[

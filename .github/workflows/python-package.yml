@@ -20,7 +20,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install .
-      - name: 'Test PC Skeletor'
+      - name: 'Test Aruco Scale Factor Estimation'
         run: |
           ls -la 
           python3 scale_estimator.py --test_data
