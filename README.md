@@ -132,11 +132,8 @@ repo [COLMAP Utility Scripts](https://github.com/uzh-rpg/colmap_utils) by [uzh-r
 
 ## Trouble Shooting
 
-- In some cases cv2 does not detect the aruco marker module. Reinstalling opencv-python and opencv-python-python might
+*In some cases cv2 does not detect the aruco marker module. Reinstalling opencv-python and opencv-python-python might
   help [Source](https://stackoverflow.com/questions/45972357/python-opencv-aruco-no-module-named-cv2-aruco)
-
-## References
-
 * [PyExifTool](https://github.com/sylikc/pyexiftool): A library to communicate with the [ExifTool](https://exiftool.org)
   command- application. If you have trouble installing it please refer to the PyExifTool-Homepage. 
 ```bash
@@ -149,7 +146,9 @@ make test
 sudo make install
 ```
 
-<div class="csl-entry">[1] Erich, F., Bourreau, B., <i>Neural Scanning: Rendering and determining geometry of household objects using Neural Radiance Fields</i> <a href="https://robocip-aist.github.io/sii_nerf_scans/">Link</a>. 2022</div>
+## References
+Thanks to [Baptiste](https://github.com/Baptiste-AIST) for providing the data for the cube reconstruction. Source from:
+[1] <div class="csl-entry">Erich, F., Bourreau, B., <i>Neural Scanning: Rendering and determining geometry of household objects using Neural Radiance Fields</i> <a href="https://robocip-aist.github.io/sii_nerf_scans/">Link</a>. 2022</div>
 
 ## Citation
 
