@@ -16,7 +16,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
     name='aruco-estimator',
-    version='1.1.6',
+    version='1.1.7',
     description='Aruco Scale Factor Estimation',
     license="MIT",
     long_description=long_description,
