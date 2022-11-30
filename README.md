@@ -128,7 +128,7 @@ python3 scale_estimator.py --test_data
 
 * The Code to read out the binary COLMAP data is partly borrowed from the
 repo [COLMAP Utility Scripts](https://github.com/uzh-rpg/colmap_utils) by [uzh-rpg](https://github.com/uzh-rpg).
-* The visualization of the wooden block is created from the dataset found in [[1](https://robocip-aist.github.io/sii_nerf_scans/)]
+* Thanks to [Baptiste](https://github.com/Baptiste-AIST) for providing the data for the wooden block reconstruction. Source from [[1](https://robocip-aist.github.io/sii_nerf_scans/)]
 
 ## Trouble Shooting
 
@@ -147,8 +147,7 @@ sudo make install
 ```
 
 ## References
-Thanks to [Baptiste](https://github.com/Baptiste-AIST) for providing the data for the cube reconstruction. Source from:
-[1] <div class="csl-entry">Erich, F., Bourreau, B., <i>Neural Scanning: Rendering and determining geometry of household objects using Neural Radiance Fields</i> <a href="https://robocip-aist.github.io/sii_nerf_scans/">Link</a>. 2022</div>
+<div class="csl-entry">[1] Erich, F., Bourreau, B., <i>Neural Scanning: Rendering and determining geometry of household objects using Neural Radiance Fields</i> <a href="https://robocip-aist.github.io/sii_nerf_scans/">Link</a>. 2022</div>
 
 ## Citation
 
