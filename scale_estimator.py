@@ -54,7 +54,7 @@ if __name__ == '__main__':
     print('Size of the unscaled aruco markers: ', aruco_distance)
 
     # Calculate scaling factor and apply to scene
-    dense, scale_factor = aruco_scale_factor.apply(true_scale=args.aruco_size)
+    dense, scale_factor = aruco_scale_factor.apply()
     print('Point cloud and poses are scaled by: ', scale_factor)
     print('Size of the scaled (true to scale) aruco markers in meters: ', aruco_distance * scale_factor)
 
