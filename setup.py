@@ -33,7 +33,8 @@ setuptools.setup(
                       "pyquaternion",
                       "pycolmap",
                       "tqdm",
-                      "wget"],  # external packages as dependencies
+                      "wget",
+                      "pyexiftool"],  # external packages as dependencies
     classifiers=[
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',

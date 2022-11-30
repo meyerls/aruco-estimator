@@ -10,6 +10,8 @@ See LICENSE file for more information.
 # Built-in/Generic Imports
 import argparse
 
+from colmap_wrapper.colmap import COLMAPProject
+
 # Own modules
 from aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
 from aruco_estimator import download
@@ -42,8 +44,12 @@ if __name__ == '__main__':
         raise ValueError('--colmap_project is empty! Please select a path to our colmap project or test it with our '
                          'dataset by setting the flag --test_data')
 
+    project = COLMAPProject(project_path=args.colmap_project, image_resize=0.4)
+
     # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
-    aruco_scale_factor = ArucoScaleFactor(project_path=args.colmap_project, dense_path=args.dense_model)
+    aruco_scale_factor = ArucoScaleFactor(photogrammetry_software=project,
+                                          aruco_size=args.aruco_size,
+                                          dense_path=args.dense_model)
     aruco_distance = aruco_scale_factor.run()
     print('Size of the unscaled aruco markers: ', aruco_distance)
 
@@ -53,12 +59,14 @@ if __name__ == '__main__':
     print('Size of the scaled (true to scale) aruco markers in meters: ', aruco_distance * scale_factor)
 
     if DEBUG:
-        aruco_scale_factor.visualize_scaled_scene()
-        aruco_scale_factor.analyze(true_scale=args.aruco_size)
+        aruco_scale_factor.analyze()
 
     # Visualization of the scene and rays BEFORE scaling. This might be necessary for debugging
     if args.visualize:
-        aruco_scale_factor.visualize_estimation(frustum_scale=args.frustum_size, point_size=args.point_size)
+        from aruco_estimator.visualization import ArucoVisualization
+
+        vis = ArucoVisualization(aruco_colmap=aruco_scale_factor)
+        vis.visualization(frustum_scale=0.7, point_size=0.1)
 
     # Todo: Save output, PCD and poses. Visualize!
     aruco_scale_factor.write_data()

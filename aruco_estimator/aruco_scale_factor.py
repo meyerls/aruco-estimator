@@ -16,62 +16,14 @@ from multiprocessing import Pool
 # Libs
 from tqdm import tqdm
 # Own modules
-from colmap_wrapper.colmap import COLMAP
-from colmap_wrapper.utils import generate_colmap_sparse_pc
-from colmap_wrapper.visualization import *
+from colmap_wrapper.colmap.colmap import COLMAPProject
+from colmap_wrapper.colmap.utils import generate_colmap_sparse_pc
 
-from .aruco import *
-from .opt import *
+from aruco_estimator.aruco import *
+from aruco_estimator.opt import *
+from aruco_estimator.base import *
 
 DEBUG = False
-
-
-class ScaleFactorBase:
-    def __init__(self):
-        """
-        Base class for scale factor estimation.
-
-            ---------------
-            |    Detect   |
-            ---------------
-                    |
-                    v
-            ---------------
-            |     Run     |
-            ---------------
-                    |
-                    v
-            ---------------
-            |   Evaluate  |
-            ---------------
-                    |
-                    v
-            ---------------
-            |     Apply   |
-            ---------------
-        """
-        pass
-
-    def __detect(self):
-        return NotImplemented
-
-    def __evaluate(self):
-        return NotImplemented
-
-    def get_dense_scaled(self):
-        return NotImplemented
-
-    def get_sparse_scaled(self):
-        return NotImplemented
-
-    def run(self):
-        return NotImplemented
-
-    def apply(self, *args, **kwargs):
-        return NotImplemented
-
-    def write_data(self):
-        return NotImplemented
 
 
 def timeit(func):
@@ -88,8 +40,8 @@ def timeit(func):
     return timeit_wrapper
 
 
-class ArucoScaleFactor(ScaleFactorBase, COLMAP):
-    def __init__(self, project_path: str, dense_path: str = 'fused.ply'):
+class ArucoScaleFactor(ScaleFactorBase):
+    def __init__(self, photogrammetry_software: COLMAPProject, aruco_size: float, dense_path: str = 'fused.ply'):
         """
         This class is used to determine 3D points of the aruco marker, which are used to compute a scaling factor.
         In the following the workflow is shortly described.
@@ -113,10 +65,12 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
                 | LS for Interection of Lines |
                 -------------------------------
 
-        :param project_path:
+        :param photogrammetry_software:
+        :param aruco_size:
         :param dense_path:
         """
-        COLMAP.__init__(self, project_path=project_path, dense_pc=dense_path)
+        # COLMAP.__init__(self, project_path=project_path, dense_pc=dense_path)
+        super().__init__(photogrammetry_software)
 
         self.aruco_marker_detected = None
 
@@ -141,13 +95,15 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         print('Num process: ', self.num_processes)
         self.image_names = []
         # Prepare parsed data for multi processing
-        for image_idx in self.images.keys():
-            self.image_names.append(self._src_image_path.joinpath(self.images[image_idx].name).__str__())
+        for image_idx in self.photogrammetry_software.images.keys():
+            self.image_names.append(self.photogrammetry_software._src_image_path.joinpath(
+                self.photogrammetry_software.images[image_idx].name).__str__())
 
-        if os.path.exists(self._project_path.joinpath('aruco_size.txt')):
-            self.aruco_size = float(open(self._project_path.joinpath('aruco_size.txt'), 'r').read())
-        else:
-            self.aruco_size = None
+        #if os.path.exists(self.photogrammetry_software._project_path.joinpath('aruco_size.txt')):
+        #    self.aruco_size = float(
+        #        open(self.photogrammetry_software._project_path.joinpath('aruco_size.txt'), 'r').read())
+        #else:
+        self.aruco_size = aruco_size
 
     def run(self) -> [np.ndarray, None]:
         """
@@ -181,7 +137,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
                 partial(detect_aruco_marker, dict_type=self.aruco_dict_type),
                 self.image_names), total=len(self.image_names), disable=not self.progress_bar))
 
-        if len(result) != len(self.images):
+        if len(result) != len(self.photogrammetry_software.images):
             raise ValueError("Thread return has not the same length as the input parameters!")
 
         # Checks if all tuples in list are None
@@ -190,10 +146,10 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         # else:
         #    self.aruco_marker_detected = True
 
-        for image_idx in self.images.keys():
-            self.images[image_idx].aruco_corners = result[image_idx - 1][0]
-            self.images[image_idx].aruco_id = result[image_idx - 1][1]
-            self.images[image_idx].image_path = self.image_names[image_idx - 1]
+        for image_idx in self.photogrammetry_software.images.keys():
+            self.photogrammetry_software.images[image_idx].aruco_corners = result[image_idx - 1][0]
+            self.photogrammetry_software.images[image_idx].aruco_id = result[image_idx - 1][1]
+            self.photogrammetry_software.images[image_idx].image_path = self.image_names[image_idx - 1]
             # self.images[image_idx].image = cv2.resize(result[image_idx - 1][2], (0, 0), fx=0.3, fy=0.3)
 
     def __ray_cast(self):
@@ -206,13 +162,13 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
 
         :return:
         """
-        for image_idx in self.images.keys():
-            if self.images[image_idx].aruco_corners is not None:
-                p0, n = ray_cast_aruco_corners(extrinsics=self.images[image_idx].extrinsics,
-                                               intrinsics=self.images[image_idx].intrinsics.K,
-                                               corners=self.images[image_idx].aruco_corners)
-                self.images[image_idx].p0 = p0
-                self.images[image_idx].n = n
+        for image_idx in self.photogrammetry_software.images.keys():
+            if self.photogrammetry_software.images[image_idx].aruco_corners is not None:
+                p0, n = ray_cast_aruco_corners(extrinsics=self.photogrammetry_software.images[image_idx].extrinsics,
+                                               intrinsics=self.photogrammetry_software.images[image_idx].intrinsics.K,
+                                               corners=self.photogrammetry_software.images[image_idx].aruco_corners)
+                self.photogrammetry_software.images[image_idx].p0 = p0
+                self.photogrammetry_software.images[image_idx].n = n
 
                 self.P0 = np.append(self.P0, p0)
                 self.N = np.append(self.N, n)
@@ -232,54 +188,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         # Average
         return np.mean([dist1, dist2, dist3, dist4])
 
-    def visualize_estimation(self, frustum_scale: float = 1, point_size: float = 1., sphere_size: float = 0.02):
-        """
-
-        @param frustum_scale:
-        @param point_size:
-        @param sphere_size:
-        """
-
-        # Add Dense & sparse Model to scene
-        dense_exists = self.add_colmap_dense2geometrie()
-        if not dense_exists:
-            self.add_colmap_sparse2geometrie()
-        # Add camera frustums to scene
-        self.add_colmap_frustums2geometrie(frustum_scale=frustum_scale)
-
-        for image_idx in self.images.keys():
-
-            if self.images[image_idx].aruco_corners == None:
-                aruco_line_set = generate_line_set(points=[],
-                                                   lines=[],
-                                                   color=[1, 0, 0])
-            else:
-                aruco_line_set = ray_cast_aruco_corners_visualization(
-                    p_i=self.images[image_idx].p0,
-                    n_i=self.images[image_idx].n,
-                    corners3d=self.aruco_corners_3d)
-
-            self.geometries.append(aruco_line_set)
-
-        aruco_sphere = create_sphere_mesh(t=self.aruco_corners_3d,
-                                          color=[[0, 0, 0],
-                                                 [1, 0, 0],
-                                                 [0, 0, 1],
-                                                 [1, 1, 1]],
-                                          radius=sphere_size)
-
-        aruco_rect = generate_line_set(points=[self.aruco_corners_3d[0],
-                                               self.aruco_corners_3d[1],
-                                               self.aruco_corners_3d[2],
-                                               self.aruco_corners_3d[3]],
-                                       lines=[[0, 1], [1, 2], [2, 3], [3, 0]],
-                                       color=[1, 0, 0])
-        self.geometries.append(aruco_rect)
-        self.geometries.extend(aruco_sphere)
-
-        self.start_visualizer(point_size=point_size, title='Aruco Scale Factor Estimation')
-
-    def analyze(self, true_scale):
+    def analyze(self):
         """
 
         @param true_scale: true scale of aruco marker in centimeter!
@@ -293,7 +202,7 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
             N_i = self.N.reshape(len(self.N) // 12, 4, 3)[:i]
             aruco_corners_3d = intersect_parallelized(P0=P0_i, N=N_i)
             aruco_dist = self.__evaluate(aruco_corners_3d)
-            sf[i - 1] = (true_scale) / aruco_dist
+            sf[i - 1] = (self.aruco_size) / aruco_dist
 
         plt.figure()
         plt.title('Scale Factor Estimation over Number of Images')
@@ -320,55 +229,64 @@ class ArucoScaleFactor(ScaleFactorBase, COLMAP):
         """
 
         self.scale_factor = (true_scale) / self.aruco_distance
-        self.dense_scaled = deepcopy(self.dense)
-        self.dense_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
+        self.photogrammetry_software.dense_scaled = deepcopy(self.photogrammetry_software.dense)
+        self.photogrammetry_software.dense_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
 
         # self.sparse_scaled = deepcopy(self.get_sparse())
         # self.sparse_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
 
-        self.sparse_scaled = deepcopy(self.sparse)
-        for num in self.sparse.keys():
+        self.sparse_scaled = deepcopy(self.photogrammetry_software.sparse)
+        for num in self.photogrammetry_software.sparse.keys():
             self.sparse_scaled[num].xyz = self.sparse_scaled[num].xyz * self.scale_factor
 
         # self.sparse_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
 
         # ToDo: Scale tvec and save
-        self.images_scaled = deepcopy(self.images)
-        for idx in self.images_scaled.keys():
-            self.images_scaled[idx].tvec = self.images[idx].tvec * self.scale_factor
+        self.photogrammetry_software.images_scaled = deepcopy(self.photogrammetry_software.images)
+        for idx in self.photogrammetry_software.images_scaled.keys():
+            self.photogrammetry_software.images_scaled[idx].tvec = self.photogrammetry_software.images[
+                                                                       idx].tvec * self.scale_factor
 
-        return self.dense_scaled, self.scale_factor
+        return self.photogrammetry_software.dense_scaled, self.scale_factor
 
     def write_data(self):
 
-        pcd_scaled = self._project_path
-        cameras_scaled = self._project_path.joinpath('sparse_scaled/cameras')
-        images_scaled = self._project_path.joinpath('sparse_scaled/images')
-        points_scaled = self._project_path.joinpath('sparse_scaled/points3D')
+        pcd_scaled = self.photogrammetry_software._project_path
+        cameras_scaled = self.photogrammetry_software._project_path.joinpath('sparse_scaled/cameras')
+        images_scaled = self.photogrammetry_software._project_path.joinpath('sparse_scaled/images')
+        points_scaled = self.photogrammetry_software._project_path.joinpath('sparse_scaled/points3D')
 
         cameras_scaled.mkdir(parents=True, exist_ok=True)
         images_scaled.mkdir(parents=False, exist_ok=True)
         points_scaled.mkdir(parents=False, exist_ok=True)
 
-        for image_idx in self.images_scaled.keys():
+        for image_idx in self.photogrammetry_software.images_scaled.keys():
             filename = images_scaled.joinpath('image_{:04d}.txt'.format(image_idx - 1))
-            np.savetxt(filename, self.images[image_idx].extrinsics.flatten())
+            np.savetxt(filename, self.photogrammetry_software.images[image_idx].extrinsics.flatten())
 
-        o3d.io.write_point_cloud(os.path.join(pcd_scaled, 'scaled.ply'), self.dense_scaled)
+        o3d.io.write_point_cloud(os.path.join(pcd_scaled, 'scaled.ply'), self.photogrammetry_software.dense_scaled)
 
         # Save scale factor
-        scale_factor_file_name = self._project_path.joinpath('sparse_scaled/scale_factor.txt')
+        scale_factor_file_name = self.photogrammetry_software._project_path.joinpath('sparse_scaled/scale_factor.txt')
         np.savetxt(scale_factor_file_name, np.array([self.scale_factor]))
 
 
 if __name__ == '__main__':
-    aruco_scale_factor = ArucoScaleFactor(project_path='data/door')
+    from colmap_wrapper.colmap import COLMAPProject
+    from aruco_estimator.visualization import ArucoVisualization
+
+    project = COLMAPProject(project_path='../data/door', image_resize=0.4)
+
+    aruco_scale_factor = ArucoScaleFactor(photogrammetry_software=project, aruco_size=0.15)
     aruco_distance = aruco_scale_factor.run()
     print('Mean distance between aruco markers: ', aruco_distance)
 
-    aruco_scale_factor.analyze(true_scale=aruco_scale_factor.aruco_size)
+    aruco_scale_factor.analyze()
 
     dense, scale_factor = aruco_scale_factor.apply(true_scale=aruco_scale_factor.aruco_size)
     print('Point cloud and poses are scaled by: ', scale_factor)
+
+    vis = ArucoVisualization(aruco_colmap=aruco_scale_factor)
+    vis.visualization(frustum_scale=0.7, point_size=0.1)
 
     aruco_scale_factor.write_data()

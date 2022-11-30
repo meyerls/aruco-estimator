@@ -20,12 +20,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install .
+      - name: 'Install ExifTools'
+        run: |
+          wget https://exiftool.org/Image-ExifTool-12.51.tar.gz
+          gzip -dc Image-ExifTool-12.51.tar.gz | tar -xf -
+          cd Image-ExifTool-12.51
+          perl Makefile.PL
+          make test
+          sudo make install
       - name: 'Test Aruco Scale Factor Estimation'
         run: |
-          ls -la 
+          exiftool -ver
           python3 scale_estimator.py --test_data
-          ls -la ${{ github.workspace }}
-          pwd
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@v3
         with:
