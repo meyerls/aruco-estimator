@@ -34,7 +34,7 @@ setuptools.setup(
                       "pycolmap",
                       "tqdm",
                       "wget",
-                      "exiftool"],  # external packages as dependencies
+                      "pyexiftool"],  # external packages as dependencies
     classifiers=[
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
