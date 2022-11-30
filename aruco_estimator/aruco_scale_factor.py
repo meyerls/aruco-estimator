@@ -218,7 +218,7 @@ class ArucoScaleFactor(ScaleFactorBase):
     def get_sparse_scaled(self):
         return generate_colmap_sparse_pc(self.sparse_scaled)
 
-    def apply(self, true_scale: float) -> Tuple[o3d.pybind.geometry.PointCloud, float]:
+    def apply(self) -> Tuple[o3d.pybind.geometry.PointCloud, float]:
         """
         This function can be used if the scaling of the dense point cloud should be applied directly + the extrinsic
         paramters should be scaled.
@@ -228,7 +228,7 @@ class ArucoScaleFactor(ScaleFactorBase):
         @return:
         """
 
-        self.scale_factor = (true_scale) / self.aruco_distance
+        self.scale_factor = (self.aruco_size) / self.aruco_distance
         self.photogrammetry_software.dense_scaled = deepcopy(self.photogrammetry_software.dense)
         self.photogrammetry_software.dense_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
 
