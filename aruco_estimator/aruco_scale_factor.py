@@ -283,7 +283,7 @@ if __name__ == '__main__':
 
     aruco_scale_factor.analyze()
 
-    dense, scale_factor = aruco_scale_factor.apply(true_scale=aruco_scale_factor.aruco_size)
+    dense, scale_factor = aruco_scale_factor.apply()
     print('Point cloud and poses are scaled by: ', scale_factor)
 
     vis = ArucoVisualization(aruco_colmap=aruco_scale_factor)
