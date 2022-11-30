@@ -68,7 +68,7 @@ dataset = download.Dataset()
 dataset.download_door_dataset()
 
 # Load Colmap project folder
-project = COLMAPProject(project_path='../data/door', image_resize=0.4)
+project = COLMAPProject(project_path='data/door', image_resize=0.4)
 
 # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
 aruco_scale_factor = ArucoScaleFactor(photogrammetry_software=project, aruco_size=dataset.scale)
