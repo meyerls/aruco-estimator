@@ -97,19 +97,14 @@ the bash file executable rights and install the conda env:
 git clone https://github.com/meyerls/aruco-estimator.git
 cd aruco-estimator
 chmod u+x init_env.sh
+# You might need a password to install exiftools
 ./init_env.sh
-```` 
-
-Finally install all python dependencies in the activated conda environment via
-
-````angular2html
-pip install -r requirements.txt
 ````
 
 To test the code on your local machine try the example project by using:
 
 ````angular2html
-python scale_estimator.py --test_data
+python3 scale_estimator.py --test_data
 ````
 <p align="center" width="100%">
     <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/dev/img/door.png?raw=true">
@@ -122,7 +117,6 @@ python scale_estimator.py --test_data
 ## Limitation / Improvements
 
 - [ ] Up to now only SIMPLE_RADIAL and PINHOLE camera models are supported. Extend all models
-- [ ] Install CLI Tool vi PyPi
 - [ ] Up to now only one aruco marker per scene can be detected. Multiple aruco marker could improve the scale
   estimation
 - [ ] Different aruco marker settings and marker types should be investigated for different scenarios to make it either more robust to
@@ -142,6 +136,18 @@ repo [COLMAP Utility Scripts](https://github.com/uzh-rpg/colmap_utils) by [uzh-r
   help [Source](https://stackoverflow.com/questions/45972357/python-opencv-aruco-no-module-named-cv2-aruco)
 
 ## References
+
+* [PyExifTool](https://github.com/sylikc/pyexiftool): A library to communicate with the [ExifTool](https://exiftool.org)
+  command- application. If you have trouble installing it please refer to the PyExifTool-Homepage. 
+```bash
+# For Ubuntu users:
+wget https://exiftool.org/Image-ExifTool-12.51.tar.gz
+gzip -dc Image-ExifTool-12.51.tar.gz | tar -xf -
+cd Image-ExifTool-12.51
+perl Makefile.PL
+make test
+sudo make install
+```
 
 <div class="csl-entry">[1] Erich, F., Bourreau, B., <i>Neural Scanning: Rendering and determining geometry of household objects using Neural Radiance Fields</i> <a href="https://robocip-aist.github.io/sii_nerf_scans/">Link</a>. 2022</div>
 
