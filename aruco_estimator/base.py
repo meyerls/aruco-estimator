@@ -14,11 +14,10 @@ See LICENSE file for more information.
 # ...
 
 # Own modules
-# ...
-
+from colmap_wrapper.colmap import COLMAPProject
 
 class ScaleFactorBase(object):
-    def __init__(self):
+    def __init__(self, photogrammetry_software: COLMAPProject):
         """
         Base class for scale factor estimation.
 
@@ -41,16 +40,25 @@ class ScaleFactorBase(object):
             |     Apply   |
             ---------------
         """
-        pass
+        self.photogrammetry_software = photogrammetry_software
+
+    def __detect(self):
+        return NotImplemented
 
     def __evaluate(self):
         return NotImplemented
 
-    def __detect(self):
+    def get_dense_scaled(self):
+        return NotImplemented
+
+    def get_sparse_scaled(self):
         return NotImplemented
 
     def run(self):
         return NotImplemented
 
     def apply(self, *args, **kwargs):
+        return NotImplemented
+
+    def write_data(self):
         return NotImplemented
