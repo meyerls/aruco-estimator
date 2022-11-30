@@ -32,9 +32,9 @@ jobs:
         run: |
           exiftool -ver
           python3 scale_estimator.py --test_data
-      - name: 'Upload Artifact'
-        uses: actions/upload-artifact@v3
-        with:
-          name: skeleton-artifact
-          path: ${{ github.workspace }}/data/door/**/*
-          retention-days: 5
+      #- name: 'Upload Artifact'
+      #  uses: actions/upload-artifact@v3
+      #  with:
+      #    name: skeleton-artifact
+      #    path: ${{ github.workspace }}/data/door/**/*
+      #    retention-days: 5
