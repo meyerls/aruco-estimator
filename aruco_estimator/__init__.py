@@ -17,5 +17,5 @@ from aruco_estimator import aruco_scale_factor
 from aruco_estimator import base
 from aruco_estimator import download
 from aruco_estimator import opt
-from aruco_estimator.visualization import *
+from aruco_estimator import visualization
 
