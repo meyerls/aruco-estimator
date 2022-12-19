@@ -19,7 +19,7 @@ jobs:
       - name: 'Install dependencies'
         run: |
           python -m pip install --upgrade pip
-          pip install .
+          pip install -e .
       - name: 'Install ExifTools'
         run: |
           wget https://exiftool.org/Image-ExifTool-12.51.tar.gz
@@ -31,6 +31,7 @@ jobs:
       - name: 'Test Aruco Scale Factor Estimation'
         run: |
           exiftool -ver
+          pip install -e . 
           python3 aruco_estimator/test.py --test_data
       #- name: 'Upload Artifact'
       #  uses: actions/upload-artifact@v3
