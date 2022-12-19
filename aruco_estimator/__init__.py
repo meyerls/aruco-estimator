@@ -12,10 +12,10 @@ See LICENSE file for more information.
 # ...
 
 # Own modules
-from aruco_estimator import aruco
-from aruco_estimator import aruco_scale_factor
-from aruco_estimator import base
-from aruco_estimator import download
-from aruco_estimator import opt
-from aruco_estimator.visualization import *
+from . import aruco
+from . import aruco_scale_factor
+from . import base
+from . import download
+from . import opt
+from .visualization import *
 
