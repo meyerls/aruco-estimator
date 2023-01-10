@@ -29,7 +29,7 @@ setuptools.setup(
                       "colmap_wrapper",
                       "matplotlib",
                       "open3d",
-                      "opencv-contrib-python",
+                      "opencv-contrib-python==4.6.0.66",
                       "pyquaternion",
                       "pycolmap",
                       "tqdm",
