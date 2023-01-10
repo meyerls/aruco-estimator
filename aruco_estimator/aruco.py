@@ -123,12 +123,14 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
     else:
         raise NotImplementedError
 
+    image_size = image.shape
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    corners, aruco_id, rejected_img_points = aruco.detectMarkers(gray, aruco_dict,
+    corners, aruco_id, rejected_img_points = aruco.detectMarkers(gray,
+                                                                 aruco_dict,
                                                                  parameters=aruco_parameters)
 
     if aruco_id is None:
-        return None, None
+        return None, None, image_size
 
     if False:
         if len(corners) > 0:
@@ -167,4 +169,4 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
     del gray
     del image
 
-    return corners, aruco_id
+    return corners, aruco_id, image_size

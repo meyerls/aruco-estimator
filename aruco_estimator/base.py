@@ -40,7 +40,7 @@ class ScaleFactorBase(object):
             |     Apply   |
             ---------------
         """
-        self.photogrammetry_software = photogrammetry_software
+        self.photogrammetry_software = photogrammetry_software.projects
 
     def __detect(self):
         return NotImplemented

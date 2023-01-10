@@ -6,17 +6,12 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
-import open3d as o3d
-import numpy as np
-
-from colmap_wrapper.colmap import COLMAP
-from colmap_wrapper.colmap.colmap_project import PhotogrammetrySoftware
-from colmap_wrapper.visualization import draw_camera_viewport
 from aruco_estimator.visualization import *
+from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
 
 
 class ScaleFactorExtimatorVisualization():
-    def __init__(self, photogrammetry_software: PhotogrammetrySoftware):
+    def __init__(self, photogrammetry_software: ArucoScaleFactor):
         self.scale_factor_estimator = photogrammetry_software
         self.photogrammetry_software = photogrammetry_software.photogrammetry_software
 
@@ -30,7 +25,7 @@ class ScaleFactorExtimatorVisualization():
 
 
 class ArucoVisualization(ScaleFactorExtimatorVisualization):
-    def __init__(self, aruco_colmap: COLMAP, bg_color: np.ndarray = np.asarray([1, 1, 1])):
+    def __init__(self, aruco_colmap: ArucoScaleFactor, bg_color: np.ndarray = np.asarray([1, 1, 1])):
         super().__init__(aruco_colmap)
 
         self.vis_bg_color = bg_color
@@ -91,7 +86,6 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
 
         self.geometries.extend(geometries)
 
-
     def visualization(self, frustum_scale: float = 1, point_size: float = 1., sphere_size: float = 0.02):
         """
 
@@ -125,7 +119,7 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
                                           color=[[0, 0, 0],
                                                  [1, 0, 0],
                                                  [0, 0, 1],
-                                                 [1, 1, 1]],
+                                                 [1, 1, 0]],
                                           radius=sphere_size)
 
         aruco_rect = generate_line_set(points=[self.scale_factor_estimator.aruco_corners_3d[0],
