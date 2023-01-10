@@ -18,6 +18,7 @@ from tqdm import tqdm
 
 # Own modules
 from colmap_wrapper.colmap.utils import generate_colmap_sparse_pc
+from colmap_wrapper.colmap.bin import write_cameras_text, write_images_text, write_points3D_text
 from aruco_estimator.aruco import *
 from aruco_estimator.opt import *
 from aruco_estimator.base import *
@@ -273,17 +274,18 @@ class ArucoScaleFactor(ScaleFactorBase):
     def write_data(self):
 
         pcd_scaled = self.photogrammetry_software._project_path
-        cameras_scaled = self.photogrammetry_software._project_path.joinpath('sparse_scaled/cameras')
-        images_scaled = self.photogrammetry_software._project_path.joinpath('sparse_scaled/images')
-        points_scaled = self.photogrammetry_software._project_path.joinpath('sparse_scaled/points3D')
+        sparse_scaled_path = self.photogrammetry_software._project_path.joinpath('sparse_scaled')
+        cameras_scaled = sparse_scaled_path.joinpath('cameras.txt')
+        images_scaled = sparse_scaled_path.joinpath('images.txt')
+        points_scaled = sparse_scaled_path.joinpath('points3D.txt')
 
-        cameras_scaled.mkdir(parents=True, exist_ok=True)
-        images_scaled.mkdir(parents=False, exist_ok=True)
-        points_scaled.mkdir(parents=False, exist_ok=True)
+        write_cameras_text(self.photogrammetry_software.cameras, cameras_scaled)
+        write_images_text(self.photogrammetry_software.images_scaled, images_scaled)
+        write_points3D_text(self.sparse_scaled, points_scaled)
 
-        for image_idx in self.photogrammetry_software.images_scaled.keys():
-            filename = images_scaled.joinpath('image_{:04d}.txt'.format(image_idx - 1))
-            np.savetxt(filename, self.photogrammetry_software.images[image_idx].extrinsics.flatten())
+        # for image_idx in self.photogrammetry_software.images_scaled.keys():
+        #    filename = images_scaled.joinpath('image_{:04d}.txt'.format(image_idx - 1))
+        #    np.savetxt(filename, self.photogrammetry_software.images[image_idx].extrinsics.flatten())
 
         o3d.io.write_point_cloud(os.path.join(pcd_scaled, 'scaled.ply'), self.photogrammetry_software.dense_scaled)
 
@@ -293,13 +295,13 @@ class ArucoScaleFactor(ScaleFactorBase):
 
 
 if __name__ == '__main__':
-    from colmap_wrapper.colmap import COLMAPProject
+    from colmap_wrapper.colmap import COLMAP
     from aruco_estimator.visualization import ArucoVisualization
 
-    project = COLMAPProject(project_path='../data/door', image_resize=0.4)
+    project = COLMAP(project_path='../data/door', image_resize=0.4)
 
     aruco_scale_factor = ArucoScaleFactor(photogrammetry_software=project, aruco_size=0.15)
-    aruco_distance = aruco_scale_factor.run()
+    aruco_distance, aruco_points3d = aruco_scale_factor.run()
     print('Mean distance between aruco markers: ', aruco_distance)
 
     aruco_scale_factor.analyze()
