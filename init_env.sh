@@ -14,3 +14,10 @@ conda install -y pip
 
 python3 -m pip install --upgrade pip
 pip install -r requirements.txt
+
+wget https://exiftool.org/Image-ExifTool-12.51.tar.gz
+gzip -dc Image-ExifTool-12.51.tar.gz | tar -xf -
+cd Image-ExifTool-12.51
+perl Makefile.PL
+make test
+sudo make install
