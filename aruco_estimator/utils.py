@@ -11,19 +11,38 @@ import open3d as o3d
 from copy import copy
 
 
-def kabsch_umeyama(A, B):
-    assert A.shape == B.shape
-    n, m = A.shape
+def kabsch_umeyama(pointset_A, pointset_B):
+    """
+    Kabsch–Umeyama algorithm is a method for aligning and comparing the similarity between two sets of points.
+    It finds the optimal translation, rotation and scaling by minimizing the root-mean-square deviation (RMSD)
+    of the point pairs.
 
-    EA = np.mean(A, axis=0)
-    EB = np.mean(B, axis=0)
-    VarA = np.mean(np.linalg.norm(A - EA, axis=1) ** 2)
+    Source and Explenation: https://zpl.fi/aligning-point-patterns-with-kabsch-umeyama-algorithm/
 
-    H = ((A - EA).T @ (B - EB)) / n
+    @param pointset_A: array of a set of points in n-dim
+    @param pointset_B: array of a set of points in n-dim
+    @return: Rotation Matrix (3x3), scaling (scalar) translation vector (3x1)
+    """
+    assert pointset_A.shape == pointset_B.shape
+    n, m = pointset_A.shape
+
+    # Find centroids of both point sets
+    EA = np.mean(pointset_A, axis=0)
+    EB = np.mean(pointset_B, axis=0)
+
+    VarA = np.mean(np.linalg.norm(pointset_A - EA, axis=1) ** 2)
+
+    # Covariance matrix
+    H = ((pointset_A - EA).T @ (pointset_B - EB)) / n
+
+    # SVD H = UDV^T
     U, D, VT = np.linalg.svd(H)
+
+    # Detect and prevent reflection
     d = np.sign(np.linalg.det(U) * np.linalg.det(VT))
     S = np.diag([1] * (m - 1) + [d])
 
+    # rotation, scaling and translation
     R = U @ S @ VT
     c = VarA / np.trace(np.diag(D) @ S)
     t = EA - c * R @ EB
@@ -40,13 +59,24 @@ def align_point_set(point_set_A, point_set_B):
 
 
 def plot_aligned_pointset(A, B):
-    pcd1 = o3d.geometry.PointCloud()
-    pcd1.points = o3d.utility.Vector3dVector(A)
+    """
+    Visualize transformed point set
+    @param A: array of a set of points in n-dim
+    @param B: array of a set of points in n-dim
+    @return: both point clouds
+    """
 
-    pcd2 = o3d.geometry.PointCloud()
-    pcd2.points = o3d.utility.Vector3dVector(B)
 
-    o3d.visualization.draw_geometries([pcd1, pcd2])
+    pcdA = o3d.geometry.PointCloud()
+    pcdA.points = o3d.utility.Vector3dVector(A)
+
+    pcdB = o3d.geometry.PointCloud()
+    pcdB.points = o3d.utility.Vector3dVector(B)
+
+
+    o3d.visualization.draw_geometries([pcdA, pcdB])
+
+    return pcdA, pcdB
 
 
 def get_icp_transformation(source, target, trafo, max_iteration=2000):
@@ -69,6 +99,14 @@ def get_icp_transformation(source, target, trafo, max_iteration=2000):
 
 
 def manual_registration(pcd_1, pcd_2):
+    """
+    Source: http://www.open3d.org/docs/latest/tutorial/Advanced/interactive_visualization.html
+
+    @param pcd_1:
+    @param pcd_2:
+    @return:
+    """
+
     def pick_points(pcd):
         print("")
         print(
@@ -76,13 +114,16 @@ def manual_registration(pcd_1, pcd_2):
         )
         print("   Press [shift + right click] to undo point picking")
         print("2) After picking points, press 'Q' to close the window")
-        vis = o3d.visualization.VisualizerWithEditing()
-        vis.create_window(window_name='Picker')
-        vis.add_geometry(pcd)
-        vis.run()  # user picks points
-        vis.destroy_window()
+        viewer = o3d.visualization.VisualizerWithEditing()
+        viewer.create_window(window_name='Picker')
+        opt = viewer.get_render_option()
+        # opt.show_coordinate_frame = True
+        opt.point_size = 2.5
+        viewer.add_geometry(pcd)
+        viewer.run()  # user picks points
+        viewer.destroy_window()
         print("")
-        return vis.get_picked_points()
+        return viewer.get_picked_points()
 
     def draw_registration_result(source, target, transformation):
         source_temp = copy.deepcopy(source)

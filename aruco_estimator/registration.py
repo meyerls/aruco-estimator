@@ -11,8 +11,8 @@ import open3d as o3d
 from copy import deepcopy
 from typing import Union
 
-from colmap_wrapper.colmap import COLMAP
 # Own modules
+from colmap_wrapper.colmap import COLMAP
 from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
 from aruco_estimator.visualization import ArucoVisualization
 from aruco_estimator.utils import align_point_set, plot_aligned_pointset, manual_registration
@@ -51,7 +51,7 @@ class ArucoMarkerScaledRegistration(object):
         self.scale_factor_b: float = None
 
         # Transformation matrix (4x4) to scale, rotate and translate pcd
-        self.transformation_a2b: np.ndarray = None
+        self.transformation_b2a: np.ndarray = None
 
     def load_projects(self):
         self.project_a = COLMAP(self.project_path_a, image_resize=0.3, dense_pc=self.dense_pc)
@@ -86,22 +86,24 @@ class ArucoMarkerScaledRegistration(object):
 
         if manual:
             manual_points_1, manual_points_2 = manual_registration(self.pcd_a, self.pcd_b)
+            self.aruco_corners_3d_a = np.vstack([self.aruco_corners_3d_a, manual_points_1])
+            self.aruco_corners_3d_b = np.vstack([self.aruco_corners_3d_b, manual_points_2])
 
         # Scale 3d aruco corners for alignment
         scaled_aruco_corners_a = self.scale_factor_a * self.aruco_corners_3d_a
         scaled_aruco_corners_b = self.scale_factor_b * self.aruco_corners_3d_b
 
-        a, b, transformation_a2b = align_point_set(scaled_aruco_corners_a, scaled_aruco_corners_b)
+        A, B, transformation_b2a = align_point_set(scaled_aruco_corners_a, scaled_aruco_corners_b)
 
         if debug:
-            plot_aligned_pointset(a, b)
+            plot_aligned_pointset(A, B)
 
         # Init 4x4 transformation matrix
-        self.transformation_a2b = np.eye(4)
-        self.transformation_a2b[:3, :4] = np.hstack(
-            [(transformation_a2b[1]) * transformation_a2b[0], np.expand_dims(transformation_a2b[2], axis=0).T])
+        self.transformation_b2a = np.eye(4)
+        self.transformation_b2a[:3, :4] = np.hstack(
+            [(transformation_b2a[1]) * transformation_b2a[0], np.expand_dims(transformation_b2a[2], axis=0).T])
 
-        pcd_b_transformed = self.pcd_b.transform(self.transformation_a2b)
+        pcd_b_transformed = self.pcd_b.transform(self.transformation_b2a)
         self.pcd_combined = deepcopy(self.pcd_a)
         self.pcd_combined += pcd_b_transformed
 
@@ -122,7 +124,7 @@ class ArucoMarkerScaledRegistration(object):
         common_path = os.path.commonpath(([self.project_path_a, self.project_path_b]))
         # Save combined pcd and transformation from a to b
         o3d.io.write_point_cloud(os.path.join(common_path, './combined.ply'), self.pcd_combined)
-        np.savetxt(os.path.join(common_path, 'transformation_a2b.txt'), self.transformation_a2b)
+        np.savetxt(os.path.join(common_path, 'transformation_b2a.txt'), self.transformation_b2a)
 
         self.aruco_scale_factor_a.write_data()
         self.aruco_scale_factor_b.write_data()
@@ -133,98 +135,7 @@ if __name__ == '__main__':
                                                         project_path_b="/home/luigi/Documents/reco/Baum 8/side_2",
                                                         dense_pc='cropped.ply')
     scaled_registration.scale(debug=False)
-    point_set = None
-    # (np.asarray([-3.074686, -3.703092, 4.512500]), np.asarray([-4.271004, -4.733126, 3.378184])) # Baum 08
+    point_set = (np.asarray([-3.074686, -3.703092, 4.512500]), np.asarray([-4.271004, -4.733126, 3.378184])) # Baum 08
     # (np.asarray([-4.037381, -1.749546, 6.646245]), np.asarray([2.538995, -4.001166, 4.676914])) # Baum 07
-    scaled_registration.registrate(additional_points=point_set, manual=True, debug=False)
+    scaled_registration.registrate(additional_points=point_set, manual=False, debug=True)
     scaled_registration.write()
-
-"""
-SHOW_ARUCO_ESTIMATION = False
-
-project1 = COLMAP("/home/luigi/Documents/reco/Baum 8/side_1", image_resize=0.3, dense_pc='cropped.ply')
-colmap_project1 = project1.projects
-aruco_scale_factor1 = ArucoScaleFactor(photogrammetry_software=project1, aruco_size=0.3)
-aruco_distance1, aruco_corners_3d1 = aruco_scale_factor1.run()
-print('Distance: ', aruco_distance1)
-
-pcd_1, scale_factor_1 = aruco_scale_factor1.apply()
-aruco_scale_factor1.write_data()
-
-if SHOW_ARUCO_ESTIMATION:
-    # Visualization of the scene and rays
-    vis = ArucoVisualization(aruco_colmap=aruco_scale_factor1)
-    vis.visualization(frustum_scale=0.3, point_size=0.1)
-
-project2 = COLMAP("/home/luigi/Documents/reco/Baum 8/side_2", image_resize=0.3, dense_pc='cropped.ply')
-colmap_project2 = project1.projects
-aruco_scale_factor2 = ArucoScaleFactor(photogrammetry_software=project2, aruco_size=0.3)
-aruco_distance2, aruco_corners_3d2 = aruco_scale_factor2.run()
-print('Distance: ', aruco_distance2)
-
-pcd_2, scale_factor_2 = aruco_scale_factor2.apply()
-aruco_scale_factor2.write_data()
-
-if False:
-    o3d.visualization.draw_geometries([pcd_1, pcd_2],
-                                      zoom=0.4459,
-                                      front=[0.9288, -0.2951, -0.2242],
-                                      lookat=[1.6784, 2.0612, 1.4451],
-                                      up=[-0.3402, -0.9189, -0.1996])
-
-if SHOW_ARUCO_ESTIMATION:
-    # Visualization of the scene and rays
-    vis = ArucoVisualization(aruco_colmap=aruco_scale_factor2)
-    vis.visualization(frustum_scale=0.3, point_size=0.1)
-
-# Baum 7, side 1: [-4.037381 -1.749546 6.646245]
-# Baum 7, Side 2: [2.538995 -4.001166 4.676914]
-# aruco_corners_3d1 = np.vstack([aruco_corners_3d1, np.asarray([-4.037381, -1.749546, 6.646245])])
-# aruco_corners_3d2 = np.vstack([aruco_corners_3d2, np.asarray([2.538995, -4.001166, 4.676914])])
-
-# Baum, 8, side 1: [-3.074686 -3.703092 4.512500]
-# Baum, 8, side 2: [-4.271004 -4.733126 3.378184]
-
-aruco_corners_3d1 = np.vstack([aruco_corners_3d1, np.asarray([-3.074686, -3.703092, 4.512500])])
-aruco_corners_3d2 = np.vstack([aruco_corners_3d2, np.asarray([-4.271004, -4.733126, 3.378184])])
-
-# manual_points_1, manual_points_2 = manual_registration(pcd_1, pcd_2)
-
-
-# aruco_corners_3d1 = np.vstack([aruco_corners_3d1, manual_points_1])
-# aruco_corners_3d2 = np.vstack([aruco_corners_3d2, manual_points_2])
-
-A, B, trafo_AB = align_point_set(scale_factor_1 * aruco_corners_3d1, scale_factor_2 * aruco_corners_3d2)
-
-plot_aligned_pointset(A, B)
-
-trans_init = np.eye(4)
-trans_init[:3, :4] = np.hstack([(trafo_AB[1]) * trafo_AB[0], np.expand_dims(trafo_AB[2], axis=0).T])
-
-pcd_2_transformed = pcd_2.transform(trans_init)
-np.savetxt('transformation.txt', trans_init)
-pcd_1 += pcd_2_transformed
-
-o3d.io.write_point_cloud('./combined.ply', pcd_1)
-
-o3d.visualization.draw_geometries([pcd_1],
-                                  zoom=0.4459,
-                                  front=[0.9288, -0.2951, -0.2242],
-                                  lookat=[1.6784, 2.0612, 1.4451],
-                                  up=[-0.3402, -0.9189, -0.1996])
-
-# total_trafo_AB = get_icp_transformation(pcd_A, pcd_B, trafo_AB, max_iteration=1000)
-#
-# pcd_B.transform(total_trafo_AB.transformation)
-#
-# o3d.visualization.draw_geometries([pcd_A, pcd_B],
-#                                  zoom=0.4459,
-#                                  front=[0.9288, -0.2951, -0.2242],
-#                                  lookat=[1.6784, 2.0612, 1.4451],
-#                                  up=[-0.3402, -0.9189, -0.1996])
-#
-# pcd_A += pcd_B
-#
-# o3d.io.write_point_cloud('./combined2.ply', pcd_A)
-
-"""
