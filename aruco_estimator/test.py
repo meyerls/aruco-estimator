@@ -10,7 +10,7 @@ See LICENSE file for more information.
 # Built-in/Generic Imports
 import argparse
 
-from colmap_wrapper.colmap import COLMAPProject
+from colmap_wrapper.colmap import COLMAP
 
 # Own modules
 from aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
@@ -44,13 +44,13 @@ if __name__ == '__main__':
         raise ValueError('--colmap_project is empty! Please select a path to our colmap project or test it with our '
                          'dataset by setting the flag --test_data')
 
-    project = COLMAPProject(project_path=args.colmap_project, image_resize=0.4)
+    project = COLMAP(project_path=args.colmap_project, image_resize=0.4)
 
     # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
     aruco_scale_factor = ArucoScaleFactor(photogrammetry_software=project,
                                           aruco_size=args.aruco_size,
                                           dense_path=args.dense_model)
-    aruco_distance = aruco_scale_factor.run()
+    aruco_distance, aruco_corners_3d = aruco_scale_factor.run()
     print('Size of the unscaled aruco markers: ', aruco_distance)
 
     # Calculate scaling factor and apply to scene

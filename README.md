@@ -1,5 +1,5 @@
 <p align="center" width="100%">
-    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/dev/img/wood.png?raw=true">
+    <img width="100%" src="https://media.githubusercontent.com/media/meyerls/aruco-estimator/main/img/wood.png">
 </p>
 
 # Automatic Estimation of the Scale Factor Based on Aruco Markers (Work in Progress!)
@@ -59,7 +59,7 @@ using ``aruco_scale_factor.apply(true_scale)``.
 from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
 from aruco_estimator.visualization import ArucoVisualization
 from aruco_estimator import download
-from colmap_wrapper.colmap import COLMAPProject
+from colmap_wrapper.colmap import COLMAP
 import os
 import open3d as o3d
 
@@ -68,11 +68,11 @@ dataset = download.Dataset()
 dataset.download_door_dataset()
 
 # Load Colmap project folder
-project = COLMAPProject(project_path=dataset.dataset_path, image_resize=0.4)
+project = COLMAP(project_path=dataset.dataset_path, image_resize=0.4)
 
 # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
 aruco_scale_factor = ArucoScaleFactor(photogrammetry_software=project, aruco_size=dataset.scale)
-aruco_distance = aruco_scale_factor.run()
+aruco_distance, aruco_corners_3d = aruco_scale_factor.run()
 print('Size of the unscaled aruco markers: ', aruco_distance)
 
 # Calculate scaling factor, apply it to the scene and save scaled point cloud
@@ -104,14 +104,14 @@ chmod u+x init_env.sh
 To test the code on your local machine try the example project by using:
 
 ````angular2html
-python3 scale_estimator.py --test_data
+python3 scale_estimator.py --test_data --visualize --frustum_size 0.4
 ````
 <p align="center" width="100%">
-    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/dev/img/door.png?raw=true">
+    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/main/img/door.png?raw=true">
 </p>
 
 <p align="center" width="100%">
-    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/dev/img/output.gif?raw=true">
+    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/main/img/output.gif?raw=true">
 </p>
 
 ## Limitation / Improvements
@@ -132,7 +132,7 @@ repo [COLMAP Utility Scripts](https://github.com/uzh-rpg/colmap_utils) by [uzh-r
 
 ## Trouble Shooting
 
-*In some cases cv2 does not detect the aruco marker module. Reinstalling opencv-python and opencv-python-python might
+* In some cases cv2 does not detect the aruco marker module. Reinstalling opencv-python and opencv-python-python might
   help [Source](https://stackoverflow.com/questions/45972357/python-opencv-aruco-no-module-named-cv2-aruco)
 * [PyExifTool](https://github.com/sylikc/pyexiftool): A library to communicate with the [ExifTool](https://exiftool.org)
   command- application. If you have trouble installing it please refer to the PyExifTool-Homepage. 
@@ -155,7 +155,7 @@ Please cite this paper, if this work helps you with your research:
 
 ```
 @InProceedings{ ,
-  author="H",
+  author="",
   title="",
   booktitle="",
   year="",
