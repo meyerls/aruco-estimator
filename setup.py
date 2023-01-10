@@ -26,7 +26,7 @@ setuptools.setup(
     url="https://github.com/meyerls/aruco-estimator",
     packages=['aruco_estimator'],
     install_requires=["numpy",
-                      "colmap_wrapper",
+                      "colmap_wrapper==1.1.5",
                       "matplotlib",
                       "open3d",
                       "opencv-contrib-python==4.6.0.66",
