@@ -279,6 +279,8 @@ class ArucoScaleFactor(ScaleFactorBase):
         images_scaled = sparse_scaled_path.joinpath('images.txt')
         points_scaled = sparse_scaled_path.joinpath('points3D.txt')
 
+        sparse_scaled_path.mkdir(parents=True, exist_ok=True)
+
         write_cameras_text(self.photogrammetry_software.cameras, cameras_scaled)
         write_images_text(self.photogrammetry_software.images_scaled, images_scaled)
         write_points3D_text(self.sparse_scaled, points_scaled)
