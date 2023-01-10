@@ -163,7 +163,7 @@ class ArucoScaleFactor(ScaleFactorBase):
             self.photogrammetry_software.images[image_key].image_path = self.image_names[image_idx]
             # self.images[image_idx].image = cv2.resize(result[image_idx - 1][2], (0, 0), fx=0.3, fy=0.3)
 
-        # Only one aruco marker is allowed
+        # Only one aruco marker is allowed. Todo: Extend to multiple possible aruco markers
         self.dominant_aruco_id = np.argmax(np.bincount(aruco_ids))
 
     def __ray_cast(self):

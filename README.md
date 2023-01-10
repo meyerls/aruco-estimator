@@ -46,14 +46,9 @@ dataset = download.Dataset()
 dataset.download_door_dataset(output_path='.')
 ````
 
-### API
+### Scale Factor Estimation
 
-A use of the code on the provided dataset can be seen in the following block. The most important function is 
-``aruco_scale_factor.run()``. Here, an aruco marker is searched for in each image. If a marker is found in at 
-least 2 images, the position of the aruco corner in 3D is calculated based on the camera poses and the corners of 
-the aruco maker.Based on the positions of the corners of the square aruco marker, the size of the marker in the unscaled 
-reconstruction can be determined. With the correct metric size of the marker, the scene can be scaled true to scale 
-using ``aruco_scale_factor.apply(true_scale)``. 
+An example of how to use the aruco estimator is shown below.
 
 ````python
 from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
@@ -88,6 +83,23 @@ vis.visualization(frustum_scale=0.7, point_size=0.1)
 aruco_scale_factor.write_data()
 ````
 
+### Registration and Scaling
+
+In some cases COLMAP is not able to registrate all images into one dense reconstruction. If appears to be reconstructed 
+into two seperated reconstruction. To registrate both (up to know only two are possible) reconstructions the aruco 
+markers are used to registrate both sides using ```ArucoMarkerScaledRegistration```.
+
+```python
+from aruco_estimator.registration import ArucoMarkerScaledRegistration
+
+scaled_registration = ArucoMarkerScaledRegistration(project_path_a=[path2part1],
+                                                    project_path_b=[path2part2])
+scaled_registration.scale(debug=True)
+scaled_registration.registrate(manual=False, debug=True)
+scaled_registration.write()
+```
+
+
 ## Source
 
 If you want to install the repo from source make sure that conda is installed. Afterwards clone this repository, give
@@ -104,7 +116,7 @@ chmod u+x init_env.sh
 To test the code on your local machine try the example project by using:
 
 ````angular2html
-python3 scale_estimator.py --test_data --visualize --frustum_size 0.4
+python3 aruco_estimator/test.py --test_data --visualize --frustum_size 0.4
 ````
 <p align="center" width="100%">
     <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/main/img/door.png?raw=true">
