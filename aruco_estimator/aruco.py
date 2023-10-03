@@ -19,7 +19,10 @@ import numpy as np
 import open3d as o3d
 from PIL import Image
 # Own modules
-from colmap_wrapper.visualization import *
+
+import sys
+sys.path.append("C:/Users/meyerls/Documents/AIST/code/gaussian-splatting/colmap-wrapper")
+from colmap_wrapper.visualization.visualization import *
 
 
 def ray_cast_aruco_corners(extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple) \
@@ -49,7 +52,7 @@ def load_image(image_path: str) -> np.ndarray:
     :param image_path:
     :return:
     """
-    return np.asarray(Image.open(image_path))
+    return cv2.imread(image_path)#np.asarray(Image.open(image_path))
 
 
 class ArucoDetection:
@@ -134,10 +137,13 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
 
     if False:
         if len(corners) > 0:
+
             # flatten the ArUco IDs list
             ids = aruco_id.flatten()
             # loop over the detected ArUCo corners
             for (markerCorner, markerID) in zip(corners, ids):
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
                 # extract the marker corners (which are always returned in
                 # top-left, top-right, bottom-right, and bottom-left order)
                 corners_plot = markerCorner.reshape((4, 2))
@@ -149,10 +155,10 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
                 topLeft = (int(topLeft[0]), int(topLeft[1]))
 
                 # draw the bounding box of the ArUCo detection
-                cv2.line(image, topLeft, topRight, (0, 255, 0), 5)
-                cv2.line(image, topRight, bottomRight, (0, 255, 0), 5)
-                cv2.line(image, bottomRight, bottomLeft, (0, 255, 0), 5)
-                cv2.line(image, bottomLeft, topLeft, (0, 255, 0), 5)
+                cv2.line(image, topLeft, topRight, (0, 255, 0), 25)
+                cv2.line(image, topRight, bottomRight, (0, 255, 0), 25)
+                cv2.line(image, bottomRight, bottomLeft, (0, 255, 0), 25)
+                cv2.line(image, bottomLeft, topLeft, (0, 255, 0), 25)
                 # compute and draw the center (x, y)-coordinates of the ArUco
                 # marker
                 cX = int((topLeft[0] + bottomRight[0]) / 2.0)
@@ -162,6 +168,10 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
                 cv2.putText(image, str(markerID),
                             (topLeft[0], topLeft[1] - 15), cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (0, 255, 0), 10)
+                width = int(image.shape[1] * 0.3 )
+                height = int(image.shape[0] * 0.3 )
+                dim = (width, height)
+                image = cv2.resize(image, dim)
 
                 plt.imshow(image, cmap='gray')
                 plt.show()
