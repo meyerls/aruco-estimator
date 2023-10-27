@@ -86,7 +86,7 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
 
         self.geometries.extend(geometries)
 
-    def visualization(self, frustum_scale: float = 1, point_size: float = 1., sphere_size: float = 0.02):
+    def visualization(self, frustum_scale: float = 1, point_size: float = 1., line_width:float = 5., sphere_size: float = 0.02):
         """
 
         @param frustum_scale:
@@ -131,10 +131,11 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
         self.geometries.append(aruco_rect)
         self.geometries.extend(aruco_sphere)
 
-        self.start_visualizer(point_size=point_size, title='Aruco Scale Factor Estimation')
+        self.start_visualizer(point_size=point_size, line_width=line_width, title='Aruco Scale Factor Estimation')
 
     def start_visualizer(self,
-                         point_size: float,
+                         point_size: float = 1.,
+                         line_width: float = 5.,
                          title: str = "Open3D Visualizer",
                          size: tuple = (1920, 1080)):
         viewer = o3d.visualization.Visualizer()
@@ -145,7 +146,7 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
         opt = viewer.get_render_option()
         # opt.show_coordinate_frame = True
         opt.point_size = point_size
-        opt.line_width = 5
+        opt.line_width = line_width
         opt.background_color = self.vis_bg_color
         viewer.run()
         viewer.destroy_window()
