@@ -14,7 +14,7 @@ import logging
 from colmap_wrapper.colmap import COLMAP
 
 from aruco_estimator.scale_factor.aruco_scale_factor import ArucoScaleFactor
-from aruco_estimator.tools import download
+from aruco_estimator.tools import downloader
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Estimate scale factor for COLMAP projects with aruco markers.')
@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     if args.test_data:
         # Download example dataset. Door dataset is roughly 200 MB
-        dataset = download.Dataset()
+        dataset = downloader.Dataset()
         dataset.download_door_dataset()
 
         args.colmap_project = dataset.dataset_path

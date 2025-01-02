@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 from colmap_wrapper.visualization import COLMAP
-from cv2 import aruco
 from PIL import Image
 
 
@@ -38,15 +37,15 @@ def ray_cast_aruco_corners(extrinsics: np.ndarray, intrinsics: np.ndarray, corne
     return camera_origin, rays_norm
 
 class ArucoDetection:
-    def __init__(self, dict_type: int = aruco.DICT_4X4_100):
+    def __init__(self, dict_type: int = cv2.aruco.DICT_4X4_100):
         """
         More information on aruco parameters: https://docs.opencv.org/4.x/d1/dcd/structcv_1_1aruco_1_1DetectorParameters.html
 
         @param dict_type:
         """
         self.dict_type = dict_type
-        self.aruco_dict = aruco.getPredefinedDictionary(dict_type)
-        self.aruco_parameters = aruco.DetectorParameters()
+        self.aruco_dict = cv2.aruco.getPredefinedDictionary(dict_type)
+        self.aruco_parameters = cv2.aruco.DetectorParameters()
         self.aruco_parameters.adaptiveThreshConstant = 7
         self.aruco_parameters.adaptiveThreshWinSizeMin = 3
         self.aruco_parameters.adaptiveThreshWinSizeMax = 23
@@ -60,8 +59,8 @@ class ArucoDetection:
         return detect_aruco_marker(image=image, dict_type=self.aruco_dict, aruco_parameters=self.aruco_parameters)
 
 
-def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_100,
-                        aruco_parameters: cv2.aruco.DetectorParameters = aruco.DetectorParameters()) -> Tuple[
+def detect_aruco_marker(image: np.ndarray, dict_type: int = cv2.aruco.DICT_4X4_100,
+                        aruco_parameters: cv2.aruco.DetectorParameters = cv2.aruco.DetectorParameters()) -> Tuple[
     tuple, np.ndarray]:
     """
     More information on aruco parameters: https://docs.opencv.org/4.x/d1/dcd/structcv_1_1aruco_1_1DetectorParameters.html
@@ -82,21 +81,12 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_100,
     :param image:
     :return:
     """
-    # print("#####")
-
-    # Info: https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
-    aruco_dict = aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_100)#dict_type)
-    # aruco_parameters = aruco.DetectorParameters_create()
     
-    parameters = cv2.aruco.DetectorParameters()
-    parameters.adaptiveThreshConstant = 7
-    parameters.adaptiveThreshWinSizeMin = 3
-    parameters.adaptiveThreshWinSizeMax = 23
-    parameters.adaptiveThreshWinSizeStep = 10
-    parameters.minMarkerPerimeterRate = 0.03
-    parameters.maxMarkerPerimeterRate = 4.0
-
-    detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
+    # Info: https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
+    aruco_dict = cv2.aruco.getPredefinedDictionary(dict_type)
+    # aruco_parameters = cv2.aruco.DetectorParameters_create()
+ 
+    detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_parameters)
     
 
     image = cv2.imread(image)

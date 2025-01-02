@@ -8,13 +8,6 @@
 <a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aruco-estimator"></a>
 <a href="https://github.com/meyerls/aruco-estimator/actions"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/meyerls/aruco-estimator/Python%20package"></a>
 <a href="https://github.com/meyerls/aruco-estimator/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/github/license/meyerls/aruco-estimator"></a>
-<!--a href="https://pepy.tech/project/aruco-estimator"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/aruco-estimator?label=PyPi%20downloads"></a--> 
-
-
-<!--![PyPI](https://img.shields.io/pypi/v/aruco-estimator)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/aruco-estimator?label=PyPi%20downloads)
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/meyerls/aruco-estimator/Publish%20Python%20%F0%9F%90%8D%20distributions%20%F0%9F%93%A6%20to%20PyPI%20and%20TestPyPI)
-![GitHub](https://img.shields.io/github/license/meyerls/aruco-estimator)-->
 
 ## About
 
@@ -26,7 +19,6 @@ with [COLMAP](https://colmap.github.io/) by placing an aruco marker into the sce
 ### PyPi
 
 This repository is tested on Python 3.6+ and can be installed from [PyPi](https://pypi.org/project/aruco-estimator)
-<!-- Tutorial: https://www.youtube.com/watch?v=JkeNVaiUq_c -->
 
 ````angular2html
 pip install aruco-estimator
@@ -98,20 +90,6 @@ scaled_registration.scale(debug=True)
 scaled_registration.registrate(manual=False, debug=True)
 scaled_registration.write()
 ```
-
-
-## Source
-
-If you want to install the repo from source make sure that conda is installed. Afterwards clone this repository, give
-the bash file executable rights and install the conda env:
-
-````angular2html
-git clone https://github.com/meyerls/aruco-estimator.git
-cd aruco-estimator
-chmod u+x init_env.sh
-# You might need a password to install exiftools
-./init_env.sh
-````
 
 To test the code on your local machine try the example project by using:
 
