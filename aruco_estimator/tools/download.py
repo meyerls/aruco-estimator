@@ -6,10 +6,6 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
-# Built-in/Generic Imports
-# ...
-
-# Libs
 import logging
 import os
 import urllib.request
@@ -17,9 +13,6 @@ from zipfile import ZipFile
 
 import wget
 from tqdm import tqdm
-
-# Own modules
-# ...
 
 EXISTS = True
 NON_EXIST = False
@@ -70,7 +63,7 @@ class Dataset:
 
     def __check_existence(self, output_directory, dataset_name):
         if output_directory == os.path.abspath(__file__):
-            self.data_path = os.path.abspath(os.path.join(output_directory, '..', '..', 'data'))
+            self.data_path = os.path.abspath(os.path.join(output_directory, '..','..', '..', 'data'))
         else:
             self.data_path = os.path.join(output_directory, 'data')
 

@@ -11,7 +11,6 @@ See LICENSE file for more information.
 import logging
 from typing import Tuple
 
-# Libs
 import numpy as np
 
 

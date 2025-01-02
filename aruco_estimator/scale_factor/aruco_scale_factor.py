@@ -8,8 +8,6 @@ See LICENSE file for more information.
 import logging
 import os
 import time
-
-# Built-in/Generic Imports
 from copy import deepcopy
 from functools import partial, wraps
 from multiprocessing import Pool
@@ -23,23 +21,17 @@ from colmap_wrapper.colmap.bin import (
     write_images_text,
     write_points3D_text,
 )
-
-# Own modules
 from colmap_wrapper.colmap.utils import generate_colmap_sparse_pc
-
-# Libs
 from tqdm import tqdm
 
-from aruco_estimator.aruco import aruco, detect_aruco_marker, ray_cast_aruco_corners
-from aruco_estimator.base import ScaleFactorBase
-from aruco_estimator.opt import (
+from ..aruco import aruco, detect_aruco_marker, ray_cast_aruco_corners
+from ..opt import (
     intersect,
     intersect_parallelized,
     ls_intersection_of_lines,
     ls_intersection_of_lines_parallelized,
 )
-
-DEBUG = False
+from .base import ScaleFactorBase
 
 
 def timeit(func):
@@ -114,11 +106,7 @@ class ArucoScaleFactor(ScaleFactorBase):
         for image_idx in self.photogrammetry_software.images.keys():
             self.image_names.append(self.photogrammetry_software._src_image_path.joinpath(
                 self.photogrammetry_software.images[image_idx].name).__str__())
-
-        # if os.path.exists(self.photogrammetry_software._project_path.joinpath('aruco_size.txt')):
-        #    self.aruco_size = float(
-        #        open(self.photogrammetry_software._project_path.joinpath('aruco_size.txt'), 'r').read())
-        # else:
+   
         self.aruco_size = aruco_size
 
     def run(self) -> [np.ndarray, None]:

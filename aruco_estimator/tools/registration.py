@@ -12,11 +12,9 @@ from typing import Union
 
 import numpy as np
 import open3d as o3d
-
-# Own modules
 from colmap_wrapper.colmap import COLMAP
 
-from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
+from aruco_estimator.scale_factor import ArucoScaleFactor
 from aruco_estimator.utils import (
     align_point_set,
     manual_registration,

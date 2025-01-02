@@ -8,13 +8,13 @@ See LICENSE file for more information.
 """
 
 # Built-in/Generic Imports
-import logging
 from typing import Tuple, Union
 
-# Libs
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import open3d as o3d
+from colmap_wrapper.visualization import COLMAP
 from cv2 import aruco
 from PIL import Image
 
@@ -37,53 +37,31 @@ def ray_cast_aruco_corners(extrinsics: np.ndarray, intrinsics: np.ndarray, corne
 
     return camera_origin, rays_norm
 
-
-def load_image(image_path: str) -> np.ndarray:
-    """
-    Load Image. This takes almost 50% of the time. Would be nice if it is possible to speed up this process. Any
-    ideas?
-
-    :param image_path:
-    :return:
-    """
-    return np.asarray(Image.open(image_path))
-
-
 class ArucoDetection:
-    def __init__(self, dict_type: int = aruco.DICT_4X4_1000):
+    def __init__(self, dict_type: int = aruco.DICT_4X4_100):
         """
         More information on aruco parameters: https://docs.opencv.org/4.x/d1/dcd/structcv_1_1aruco_1_1DetectorParameters.html
 
         @param dict_type:
         """
         self.dict_type = dict_type
-        self.aruco_dict = aruco.Dictionary_get(dict_type)
-        self.aruco_parameters = aruco.DetectorParameters_create()
-
-        # aruco_parameters = aruco.DetectorParameters_create()
-        # aruco_parameters.adaptiveThreshConstant = 9.0
-        # aruco_parameters.adaptiveThreshWinSizeMax = 369
-        # aruco_parameters.adaptiveThreshWinSizeMin = 7
-        # aruco_parameters.adaptiveThreshWinSizeStep = 49
-        # aruco_parameters.cornerRefinementWinSize = 9
-        # aruco_parameters.minDistanceToBorder = 7
-        # aruco_parameters.cornerRefinementMaxIterations = 149
-        # aruco_parameters.minOtsuStdDev = 4.0
-        #
-        # aruco_parameters.minMarkerDistanceRate = 0.05
-        # aruco_parameters.minMarkerPerimeterRate = 5
-        # aruco_parameters.maxMarkerPerimeterRate = 10
-        #
-        #
-        # aruco_parameters.polygonalApproxAccuracyRate = 0.05
-        # aruco_parameters.minCornerDistanceRate = 0.05
+        self.aruco_dict = aruco.getPredefinedDictionary(dict_type)
+        self.aruco_parameters = aruco.DetectorParameters()
+        self.aruco_parameters.adaptiveThreshConstant = 7
+        self.aruco_parameters.adaptiveThreshWinSizeMin = 3
+        self.aruco_parameters.adaptiveThreshWinSizeMax = 23
+        self.aruco_parameters.adaptiveThreshWinSizeStep = 10
+        self.aruco_parameters.minMarkerPerimeterRate = 0.03
+        self.aruco_parameters.maxMarkerPerimeterRate = 4.0
+        # aruco_parameters.polygonalApproxAccuracyRate = 0.01
+        # aruco_parameters.minMarkerPerimeterRate = 0.1
 
     def detect_aruco_marker(self, image: Union[np.ndarray, str]) -> Tuple[tuple, np.ndarray, np.ndarray]:
         return detect_aruco_marker(image=image, dict_type=self.aruco_dict, aruco_parameters=self.aruco_parameters)
 
 
-def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
-                        aruco_parameters: cv2.aruco.DetectorParameters = aruco.DetectorParameters_create()) -> Tuple[
+def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_100,
+                        aruco_parameters: cv2.aruco.DetectorParameters = aruco.DetectorParameters()) -> Tuple[
     tuple, np.ndarray]:
     """
     More information on aruco parameters: https://docs.opencv.org/4.x/d1/dcd/structcv_1_1aruco_1_1DetectorParameters.html
@@ -91,16 +69,7 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
     @param dict_type:
     @param image:
     @param aruco_parameters:
-    """
-
-    # Info: https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
-    aruco_dict = aruco.Dictionary_get(dict_type)
-    aruco_parameters = aruco.DetectorParameters_create()
-
-    aruco_parameters.polygonalApproxAccuracyRate = 0.01
-    aruco_parameters.minMarkerPerimeterRate = 0.1
-    aruco_parameters.maxMarkerPerimeterRate = 4.0
-    """
+    
     Aruco Corners
 
         p1------------p2
@@ -113,22 +82,33 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
     :param image:
     :return:
     """
-    if isinstance(image, np.ndarray):
-        pass
-    elif isinstance(image, str):
-        image = load_image(image_path=image)
-    else:
-        raise NotImplementedError
+    # print("#####")
 
+    # Info: https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
+    aruco_dict = aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_100)#dict_type)
+    # aruco_parameters = aruco.DetectorParameters_create()
+    
+    parameters = cv2.aruco.DetectorParameters()
+    parameters.adaptiveThreshConstant = 7
+    parameters.adaptiveThreshWinSizeMin = 3
+    parameters.adaptiveThreshWinSizeMax = 23
+    parameters.adaptiveThreshWinSizeStep = 10
+    parameters.minMarkerPerimeterRate = 0.03
+    parameters.maxMarkerPerimeterRate = 4.0
+
+    detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
+    
+
+    image = cv2.imread(image)
+    if image is None:
+        logging.warning(f"Failed to load image: {image}")
+        return None, None
     image_size = image.shape
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    corners, aruco_id, rejected_img_points = aruco.detectMarkers(gray,
-                                                                 aruco_dict,
-                                                                 parameters=aruco_parameters)
+    corners, aruco_id, _ = detector.detectMarkers(image)
+    
 
     if aruco_id is None:
         return None, None, image_size
-
     if False:
         if len(corners) > 0:
             # flatten the ArUco IDs list
@@ -163,7 +143,7 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = aruco.DICT_4X4_1000,
                 plt.imshow(image, cmap='gray')
                 plt.show()
 
-    del gray
+    # del gray
     del image
 
     return corners, aruco_id, image_size

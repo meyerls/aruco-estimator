@@ -10,7 +10,7 @@ __pycache__/git s
 # C extensions
 *.so
 _config.yml
-
+.*_cache/
 .vscode/
 # Distribution / packaging
 .Python

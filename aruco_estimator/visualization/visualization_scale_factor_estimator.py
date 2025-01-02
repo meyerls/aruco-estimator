@@ -16,7 +16,7 @@ from colmap_wrapper.visualization import (
     generate_line_set,
 )
 
-from ..aruco_scale_factor import ArucoScaleFactor
+from ..scale_factor import ArucoScaleFactor
 from .visualization import ray_cast_aruco_corners_visualization
 
 
