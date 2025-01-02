@@ -1,3 +1,37 @@
+[tool.poetry]
+name = "aruco-estimator"
+version = "0.1.0"
+description = ""
+authors = ["Nile Walker <nile.walker@jhuapl.edu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.8.20"
+matplotlib = "3.5.2"
+numpy = "1.22.4"
+opencv-contrib-python = "4.6.0.66"
+tqdm = "4.64.0"
+wget = "3.2"
+pyquaternion = "0.9.9"
+pyransac3d = "0.6.0"
+pycolmap = "^3.11.1"
+open3d = "^0.18.0"
+colmap-wrapper = "^1.1.5"
+scikit-learn = "1.3.2"
+pyyaml = "^6.0.2"
+addict = "^2.4.0"
+pandas = "*"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.8.4"
+
+[tool.ruff]
+select = ["F403"]  # Enable rule for star imports
+
+# # Alternatively, you can use:
+# [tool.ruff.flake8-import-conventions]
+# banned-from-imports = ["*"]
+
 [build-system]
-requires = ["setuptools>=42"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

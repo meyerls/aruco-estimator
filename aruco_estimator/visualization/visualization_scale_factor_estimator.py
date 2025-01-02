@@ -6,9 +6,11 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
-from aruco_estimator.visualization import *
-from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
+from .visualization import ray_cast_aruco_corners_visualization
+from ..aruco_scale_factor import ArucoScaleFactor
 import numpy as np
+import open3d as o3d
+from colmap_wrapper.visualization import draw_camera_viewport,generate_line_set,create_sphere_mesh
 
 class ScaleFactorExtimatorVisualization():
     def __init__(self, photogrammetry_software: ArucoScaleFactor):
@@ -57,7 +59,7 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
 
             if image_type == 'image':
                 image = self.photogrammetry_software.images[image_idx].getData(
-                    0.3)
+                    self.photogrammetry_software.image_resize)
             elif image_type == 'depth_geo':
                 image = self.photogrammetry_software.images[image_idx].depth_image_geometric
                 min_depth, max_depth = np.percentile(image, [5, 95])
@@ -95,9 +97,9 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
         """
 
         # Add Dense & sparse Model to scene
-        #dense_exists = self.add_colmap_dense2geometrie()
-        #if not dense_exists:
-        self.add_colmap_sparse2geometrie()
+        dense_exists = self.add_colmap_dense2geometrie()
+        if not dense_exists:
+            self.add_colmap_sparse2geometrie()
         # Add camera frustums to scene
         self.add_colmap_frustums2geometrie(frustum_scale=frustum_scale)
 
@@ -145,7 +147,7 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
         opt = viewer.get_render_option()
         # opt.show_coordinate_frame = True
         opt.point_size = point_size
-        opt.line_width = 5
+        opt.line_width = 0.01
         opt.background_color = self.vis_bg_color
         viewer.run()
         viewer.destroy_window()

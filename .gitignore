@@ -9,7 +9,9 @@ __pycache__/git s
 
 # C extensions
 *.so
+_config.yml
 
+.vscode/
 # Distribution / packaging
 .Python
 build/

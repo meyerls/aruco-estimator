@@ -14,8 +14,7 @@ See LICENSE file for more information.
 # ...
 
 # Own modules
-from colmap_wrapper.dataloader import COLMAPLoader
-from colmap_wrapper.dataloader import COLMAPProject
+from colmap_wrapper.colmap import COLMAPProject
 
 class ScaleFactorBase(object):
     def __init__(self, photogrammetry_software: COLMAPProject):
@@ -41,7 +40,7 @@ class ScaleFactorBase(object):
             |     Apply   |
             ---------------
         """
-        self.photogrammetry_software = photogrammetry_software.project_list[0]
+        self.photogrammetry_software = photogrammetry_software.projects
 
     def __detect(self):
         return NotImplemented

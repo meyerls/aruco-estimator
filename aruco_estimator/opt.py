@@ -14,10 +14,6 @@ from typing import Tuple
 import numpy as np
 
 
-# Own modules
-# ...
-
-
 def intersect(P0: np.ndarray, N: np.ndarray, solve='pseudo') -> np.ndarray:
     '''
     Least Squares Intersection of Lines: https://silo.tips/download/least-squares-intersection-of-lines#modals

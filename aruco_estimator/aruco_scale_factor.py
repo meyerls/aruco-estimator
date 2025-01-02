@@ -13,23 +13,19 @@ import os
 import time
 from functools import partial
 from functools import wraps
+import numpy as np
+from typing import Union, Tuple
 # Libs
 from tqdm import tqdm
-import numpy as np
-import matplotlib.pyplot as plt
-import shutil
 
 # Own modules
-import sys
-sys.path.append("C:/Users/meyerls/Documents/AIST/code/gaussian-splatting/aruco-estimator")
-from colmap_wrapper.dataloader.utils import generate_colmap_sparse_pc
-from colmap_wrapper.dataloader.bin import write_cameras_binary, write_images_binary, write_points3D_binary
-from colmap_wrapper.dataloader import COLMAPLoader
-from colmap_wrapper.dataloader import COLMAPProject
-
-from aruco_estimator.aruco import *
-from aruco_estimator.opt import *
-from aruco_estimator.base import *
+from colmap_wrapper.colmap.utils import generate_colmap_sparse_pc
+from colmap_wrapper.colmap.bin import write_cameras_text, write_images_text, write_points3D_text
+from aruco_estimator.aruco import aruco, detect_aruco_marker, ray_cast_aruco_corners
+import open3d as o3d
+from aruco_estimator.opt import ls_intersection_of_lines_parallelized, intersect, intersect_parallelized, ls_intersection_of_lines
+from aruco_estimator.base import ScaleFactorBase
+from colmap_wrapper.colmap import COLMAPProject, COLMAP
 
 DEBUG = False
 
@@ -49,7 +45,7 @@ def timeit(func):
 
 
 class ArucoScaleFactor(ScaleFactorBase):
-    def __init__(self, photogrammetry_software: Union[COLMAPProject, COLMAPLoader], aruco_size: float,
+    def __init__(self, photogrammetry_software: Union[COLMAPProject, COLMAP], aruco_size: float,
                  dense_path: str = 'fused.ply'):
         """
         This class is used to determine 3D points of the aruco marker, which are used to compute a scaling factor.
@@ -100,12 +96,13 @@ class ArucoScaleFactor(ScaleFactorBase):
 
         # Multi Processing
         self.progress_bar = True
-        self.num_processes = 1# 12 if os.cpu_count() > 12 else os.cpu_count()
+        self.num_processes = 12 if os.cpu_count() > 12 else os.cpu_count()
         print('Num process: ', self.num_processes)
         self.image_names = []
         # Prepare parsed data for multi processing
         for image_idx in self.photogrammetry_software.images.keys():
-            self.image_names.append(self.photogrammetry_software.images[image_idx].path)
+            self.image_names.append(self.photogrammetry_software._src_image_path.joinpath(
+                self.photogrammetry_software.images[image_idx].name).__str__())
 
         # if os.path.exists(self.photogrammetry_software._project_path.joinpath('aruco_size.txt')):
         #    self.aruco_size = float(
@@ -140,15 +137,10 @@ class ArucoScaleFactor(ScaleFactorBase):
 
         :return:
         """
-        #with Pool(self.num_processes) as p:
-       #    result = list(tqdm(p.imap(
-        #        partial(detect_aruco_marker, dict_type=self.aruco_dict_type),
-        #        self.image_names), total=len(self.image_names), disable=not self.progress_bar))
-
-        result = []
-        for image in self.image_names:
-            ret = detect_aruco_marker(image.__str__(), dict_type=self.aruco_dict_type)
-            result.append(ret)
+        with Pool(self.num_processes) as p:
+            result = list(tqdm(p.imap(
+                partial(detect_aruco_marker, dict_type=self.aruco_dict_type),
+                self.image_names), total=len(self.image_names), disable=not self.progress_bar))
 
         if len(result) != len(self.photogrammetry_software.images):
             raise ValueError("Thread return has not the same length as the input parameters!")
@@ -263,9 +255,8 @@ class ArucoScaleFactor(ScaleFactorBase):
         """
 
         self.scale_factor = (self.aruco_size) / self.aruco_distance
-        if False:
-            self.photogrammetry_software.dense_scaled = deepcopy(self.photogrammetry_software.dense)
-            self.photogrammetry_software.dense_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
+        self.photogrammetry_software.dense_scaled = deepcopy(self.photogrammetry_software.dense)
+        self.photogrammetry_software.dense_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
 
         # self.sparse_scaled = deepcopy(self.get_sparse())
         # self.sparse_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
@@ -282,36 +273,31 @@ class ArucoScaleFactor(ScaleFactorBase):
             self.photogrammetry_software.images_scaled[idx].tvec = self.photogrammetry_software.images[
                                                                        idx].tvec * self.scale_factor
 
-        return self.sparse_scaled, self.scale_factor
+        return self.photogrammetry_software.dense_scaled, self.scale_factor
 
     def write_data(self):
 
         pcd_scaled = self.photogrammetry_software._project_path
         sparse_scaled_path = self.photogrammetry_software._project_path.joinpath('sparse_scaled')
+        cameras_scaled = sparse_scaled_path.joinpath('cameras.txt')
+        images_scaled = sparse_scaled_path.joinpath('images.txt')
+        points_scaled = sparse_scaled_path.joinpath('points3D.txt')
+
         sparse_scaled_path.mkdir(parents=True, exist_ok=True)
 
-        cameras_scaled = sparse_scaled_path.joinpath('cameras.bin')
-        images_scaled = sparse_scaled_path.joinpath('images.bin')
-        points_scaled = sparse_scaled_path.joinpath('points3D.bin')
-
-
-        # Just copying the camera file bcecause some strange numbering error if cameras are saved
-        shutil.copy(self.photogrammetry_software._sparse_base_path / 'cameras.bin' , cameras_scaled)
-
-
-        #write_cameras_binary(self.photogrammetry_software.cameras, cameras_scaled)
-        write_images_binary(self.photogrammetry_software.images_scaled, images_scaled)
-        write_points3D_binary(self.sparse_scaled, points_scaled)
+        write_cameras_text(self.photogrammetry_software.cameras, cameras_scaled)
+        write_images_text(self.photogrammetry_software.images_scaled, images_scaled)
+        write_points3D_text(self.sparse_scaled, points_scaled)
 
         # for image_idx in self.photogrammetry_software.images_scaled.keys():
         #    filename = images_scaled.joinpath('image_{:04d}.txt'.format(image_idx - 1))
         #    np.savetxt(filename, self.photogrammetry_software.images[image_idx].extrinsics.flatten())
 
-        #o3d.io.write_point_cloud(os.path.join(pcd_scaled, 'scaled.ply'), self.photogrammetry_software.dense_scaled)
+        o3d.io.write_point_cloud(os.path.join(pcd_scaled, 'scaled.ply'), self.photogrammetry_software.dense_scaled)
 
         # Save scale factor
         scale_factor_file_name = self.photogrammetry_software._project_path.joinpath('sparse_scaled/scale_factor.txt')
-        #np.savetxt(scale_factor_file_name, np.array([self.scale_factor]))
+        np.savetxt(scale_factor_file_name, np.array([self.scale_factor]))
 
 
 if __name__ == '__main__':
