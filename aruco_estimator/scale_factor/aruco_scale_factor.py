@@ -12,7 +12,7 @@ from copy import deepcopy
 from functools import partial, wraps
 from multiprocessing import Pool
 from typing import Tuple, Union
-
+import cv2
 import numpy as np
 import open3d as o3d
 from colmap_wrapper.colmap import COLMAP, COLMAPProject
@@ -24,7 +24,7 @@ from colmap_wrapper.colmap.bin import (
 from colmap_wrapper.colmap.utils import generate_colmap_sparse_pc
 from tqdm import tqdm
 
-from ..aruco import aruco, detect_aruco_marker, ray_cast_aruco_corners
+from ..aruco import detect_aruco_marker, ray_cast_aruco_corners
 from ..opt import (
     intersect,
     intersect_parallelized,
@@ -90,7 +90,7 @@ class ArucoScaleFactor(ScaleFactorBase):
         # Aruco specific
         self.aruco_distance = None
         self.aruco_corners_3d = None
-        self.aruco_dict_type = aruco.DICT_4X4_1000
+        self.aruco_dict_type = cv2.aruco.DICT_4X4_1000
 
         # Results
         self.scale_factor = None
