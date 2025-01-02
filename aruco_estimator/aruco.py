@@ -18,9 +18,10 @@ from colmap_wrapper.visualization import COLMAP
 from PIL import Image
 
 
-def ray_cast_aruco_corners(extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple) \
-        -> Tuple[np.ndarray, np.ndarray]:
-    '''
+def ray_cast_aruco_corners(
+    extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
 
     n = x @ K^-1 @ R.T
 
@@ -28,13 +29,14 @@ def ray_cast_aruco_corners(extrinsics: np.ndarray, intrinsics: np.ndarray, corne
     :param intrinsics:
     :param corners:
     :return:
-    '''
+    """
     R, camera_origin = extrinsics[:3, :3], extrinsics[:3, 3]
     aruco_corners = np.concatenate((corners[0][0], np.ones((4, 1))), axis=1)
     rays = aruco_corners @ np.linalg.inv(intrinsics).T @ R.T
     rays_norm = rays / np.linalg.norm(rays, ord=2, axis=1, keepdims=True)
 
     return camera_origin, rays_norm
+
 
 class ArucoDetection:
     def __init__(self, dict_type: int = cv2.aruco.DICT_4X4_100):
@@ -55,20 +57,28 @@ class ArucoDetection:
         # aruco_parameters.polygonalApproxAccuracyRate = 0.01
         # aruco_parameters.minMarkerPerimeterRate = 0.1
 
-    def detect_aruco_marker(self, image: Union[np.ndarray, str]) -> Tuple[tuple, np.ndarray, np.ndarray]:
-        return detect_aruco_marker(image=image, dict_type=self.aruco_dict, aruco_parameters=self.aruco_parameters)
+    def detect_aruco_marker(
+        self, image: Union[np.ndarray, str]
+    ) -> Tuple[tuple, np.ndarray, np.ndarray]:
+        return detect_aruco_marker(
+            image=image,
+            dict_type=self.aruco_dict,
+            aruco_parameters=self.aruco_parameters,
+        )
 
 
-def detect_aruco_marker(image: np.ndarray, dict_type: int = cv2.aruco.DICT_4X4_100,
-                        aruco_parameters: cv2.aruco.DetectorParameters = cv2.aruco.DetectorParameters()) -> Tuple[
-    tuple, np.ndarray]:
+def detect_aruco_marker(
+    image: np.ndarray,
+    dict_type: int = cv2.aruco.DICT_4X4_100,
+    aruco_parameters: cv2.aruco.DetectorParameters = cv2.aruco.DetectorParameters(),
+) -> Tuple[tuple, np.ndarray]:
     """
     More information on aruco parameters: https://docs.opencv.org/4.x/d1/dcd/structcv_1_1aruco_1_1DetectorParameters.html
 
     @param dict_type:
     @param image:
     @param aruco_parameters:
-    
+
     Aruco Corners
 
         p1------------p2
@@ -81,13 +91,12 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = cv2.aruco.DICT_4X4_1
     :param image:
     :return:
     """
-    
+
     # Info: https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
     aruco_dict = cv2.aruco.getPredefinedDictionary(dict_type)
     # aruco_parameters = cv2.aruco.DetectorParameters_create()
- 
+
     detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_parameters)
-    
 
     image = cv2.imread(image)
     if image is None:
@@ -95,7 +104,6 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = cv2.aruco.DICT_4X4_1
         return None, None
     image_size = image.shape
     corners, aruco_id, _ = detector.detectMarkers(image)
-    
 
     if aruco_id is None:
         return None, None, image_size
@@ -104,7 +112,7 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = cv2.aruco.DICT_4X4_1
             # flatten the ArUco IDs list
             ids = aruco_id.flatten()
             # loop over the detected ArUCo corners
-            for (markerCorner, markerID) in zip(corners, ids):
+            for markerCorner, markerID in zip(corners, ids):
                 # extract the marker corners (which are always returned in
                 # top-left, top-right, bottom-right, and bottom-left order)
                 corners_plot = markerCorner.reshape((4, 2))
@@ -126,11 +134,17 @@ def detect_aruco_marker(image: np.ndarray, dict_type: int = cv2.aruco.DICT_4X4_1
                 cY = int((topLeft[1] + bottomRight[1]) / 2.0)
                 cv2.circle(image, (cX, cY), 4, (0, 0, 255), 5)
                 # draw the ArUco marker ID on the image
-                cv2.putText(image, str(markerID),
-                            (topLeft[0], topLeft[1] - 15), cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (0, 255, 0), 10)
+                cv2.putText(
+                    image,
+                    str(markerID),
+                    (topLeft[0], topLeft[1] - 15),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 255, 0),
+                    10,
+                )
 
-                plt.imshow(image, cmap='gray')
+                plt.imshow(image, cmap="gray")
                 plt.show()
 
     # del gray
