@@ -5,27 +5,39 @@ Copyright (c) 2022 Lukas Meyer
 Licensed under the MIT License.
 See LICENSE file for more information.
 """
-from multiprocessing import Pool
+import logging
+import os
+import time
 
 # Built-in/Generic Imports
 from copy import deepcopy
-import os
-import time
-from functools import partial
-from functools import wraps
+from functools import partial, wraps
+from multiprocessing import Pool
+from typing import Tuple, Union
+
 import numpy as np
-from typing import Union, Tuple
-# Libs
-from tqdm import tqdm
+import open3d as o3d
+from colmap_wrapper.colmap import COLMAP, COLMAPProject
+from colmap_wrapper.colmap.bin import (
+    write_cameras_text,
+    write_images_text,
+    write_points3D_text,
+)
 
 # Own modules
 from colmap_wrapper.colmap.utils import generate_colmap_sparse_pc
-from colmap_wrapper.colmap.bin import write_cameras_text, write_images_text, write_points3D_text
+
+# Libs
+from tqdm import tqdm
+
 from aruco_estimator.aruco import aruco, detect_aruco_marker, ray_cast_aruco_corners
-import open3d as o3d
-from aruco_estimator.opt import ls_intersection_of_lines_parallelized, intersect, intersect_parallelized, ls_intersection_of_lines
 from aruco_estimator.base import ScaleFactorBase
-from colmap_wrapper.colmap import COLMAPProject, COLMAP
+from aruco_estimator.opt import (
+    intersect,
+    intersect_parallelized,
+    ls_intersection_of_lines,
+    ls_intersection_of_lines_parallelized,
+)
 
 DEBUG = False
 
@@ -37,8 +49,7 @@ def timeit(func):
         result = func(*args, **kwargs)
         end_time = time.perf_counter()
         total_time = end_time - start_time
-        if DEBUG:
-            print(f'Function {func.__name__}{args} {kwargs} took {total_time:.4f} seconds')
+        logging.debug(f'Function {func.__name__}{args} {kwargs} took {total_time:.4f} seconds')
         return result
 
     return timeit_wrapper
@@ -97,7 +108,7 @@ class ArucoScaleFactor(ScaleFactorBase):
         # Multi Processing
         self.progress_bar = True
         self.num_processes = 12 if os.cpu_count() > 12 else os.cpu_count()
-        print('Num process: ', self.num_processes)
+        logging.info('Num process: ', self.num_processes)
         self.image_names = []
         # Prepare parsed data for multi processing
         for image_idx in self.photogrammetry_software.images.keys():
@@ -117,10 +128,6 @@ class ArucoScaleFactor(ScaleFactorBase):
         :return:
         """
         self.__detect()
-
-        # if not self.aruco_marker_detected:
-        #    return self.aruco_marker_detected
-
         self.__ray_cast()
         self.aruco_corners_3d = intersect_parallelized(P0=self.P0.reshape(len(self.P0) // 3, 3),
                                                        N=self.N.reshape(len(self.N) // 12, 4, 3))
@@ -302,18 +309,19 @@ class ArucoScaleFactor(ScaleFactorBase):
 
 if __name__ == '__main__':
     from colmap_wrapper.colmap import COLMAP
+
     from aruco_estimator.visualization import ArucoVisualization
 
     project = COLMAP(project_path='../data/door', image_resize=0.4)
 
     aruco_scale_factor = ArucoScaleFactor(photogrammetry_software=project, aruco_size=0.15)
     aruco_distance, aruco_points3d = aruco_scale_factor.run()
-    print('Mean distance between aruco markers: ', aruco_distance)
+    logging.info('Mean distance between aruco markers: ', aruco_distance)
 
     aruco_scale_factor.analyze()
 
     dense, scale_factor = aruco_scale_factor.apply()
-    print('Point cloud and poses are scaled by: ', scale_factor)
+    logging.info('Point cloud and poses are scaled by: ', scale_factor)
 
     vis = ArucoVisualization(aruco_colmap=aruco_scale_factor)
     vis.visualization(frustum_scale=0.7, point_size=0.1)

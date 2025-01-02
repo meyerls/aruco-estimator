@@ -1,1 +1,0 @@
- matplotlib==3.5.2 numpy==1.22.4  opencv-contrib-python==4.6.0.66 tqdm==4.64.0 wget==3.2 pyquaternion==0.9.9 pyransac3d==0.6.0 colmap-wrapper pycolmap open3d==0.15.2

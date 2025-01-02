@@ -6,9 +6,11 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
+import logging
+from copy import copy
+
 import numpy as np
 import open3d as o3d
-from copy import copy
 
 
 def kabsch_umeyama(pointset_A, pointset_B):
@@ -84,12 +86,12 @@ def get_icp_transformation(source, target, trafo, max_iteration=2000):
     trans_init = np.eye(4)
     trans_init[:3, :4] = np.hstack([trafo[1] * trafo[0], np.expand_dims(trafo[2], axis=0).T])
 
-    print("Initial alignment")
+    logging.info("Initial alignment")
     evaluation = o3d.pipelines.registration.evaluate_registration(
         source, target, threshold, trans_init)
-    print(evaluation)
+    logging.info(evaluation)
 
-    print("Apply point-to-point ICP")
+    logging.info("Apply point-to-point ICP")
     reg_p2p = o3d.pipelines.registration.registration_icp(
         source, target, threshold, trans_init,
         o3d.pipelines.registration.TransformationEstimationPointToPlane(),
@@ -108,12 +110,12 @@ def manual_registration(pcd_1, pcd_2):
     """
 
     def pick_points(pcd):
-        print("")
-        print(
+        logging.info("")
+        logging.info(
             "1) Please pick at least three correspondences using [shift + left click]"
         )
-        print("   Press [shift + right click] to undo point picking")
-        print("2) After picking points, press 'Q' to close the window")
+        logging.info("   Press [shift + right click] to undo point picking")
+        logging.info("2) After picking points, press 'Q' to close the window")
         viewer = o3d.visualization.VisualizerWithEditing()
         viewer.create_window(window_name='Picker')
         opt = viewer.get_render_option()
@@ -122,7 +124,7 @@ def manual_registration(pcd_1, pcd_2):
         viewer.add_geometry(pcd)
         viewer.run()  # user picks points
         viewer.destroy_window()
-        print("")
+        logging.info("")
         return viewer.get_picked_points()
 
     def draw_registration_result(source, target, transformation):

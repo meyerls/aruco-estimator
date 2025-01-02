@@ -6,11 +6,19 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
-from .visualization import ray_cast_aruco_corners_visualization
-from ..aruco_scale_factor import ArucoScaleFactor
+import logging
+
 import numpy as np
 import open3d as o3d
-from colmap_wrapper.visualization import draw_camera_viewport,generate_line_set,create_sphere_mesh
+from colmap_wrapper.visualization import (
+    create_sphere_mesh,
+    draw_camera_viewport,
+    generate_line_set,
+)
+
+from ..aruco_scale_factor import ArucoScaleFactor
+from .visualization import ray_cast_aruco_corners_visualization
+
 
 class ScaleFactorExtimatorVisualization():
     def __init__(self, photogrammetry_software: ArucoScaleFactor):

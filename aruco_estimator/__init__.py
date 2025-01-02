@@ -12,11 +12,5 @@ See LICENSE file for more information.
 # ...
 
 # Own modules
-from . import aruco
-from . import aruco_scale_factor
-from . import base
-from . import download
-from . import opt
-from . import visualization
-from . import utils
+from . import aruco, aruco_scale_factor, base, download, opt, utils, visualization
 

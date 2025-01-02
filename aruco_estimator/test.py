@@ -9,14 +9,12 @@ See LICENSE file for more information.
 
 # Built-in/Generic Imports
 import argparse
+import logging
 
 from colmap_wrapper.colmap import COLMAP
 
-# Own modules
-from aruco_estimator.aruco_scale_factor import ArucoScaleFactor, DEBUG
 from aruco_estimator import download
-
-# Libs
+from aruco_estimator.aruco_scale_factor import DEBUG, ArucoScaleFactor
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Estimate scale factor for COLMAP projects with aruco markers.')
@@ -51,12 +49,12 @@ if __name__ == '__main__':
                                           aruco_size=args.aruco_size,
                                           dense_path=args.dense_model)
     aruco_distance, aruco_corners_3d = aruco_scale_factor.run()
-    print('Size of the unscaled aruco markers: ', aruco_distance)
+    logging.info('Size of the unscaled aruco markers: ', aruco_distance)
 
     # Calculate scaling factor and apply to scene
     dense, scale_factor = aruco_scale_factor.apply()
-    print('Point cloud and poses are scaled by: ', scale_factor)
-    print('Size of the scaled (true to scale) aruco markers in meters: ', aruco_distance * scale_factor)
+    logging.info('Point cloud and poses are scaled by: ', scale_factor)
+    logging.info('Size of the scaled (true to scale) aruco markers in meters: ', aruco_distance * scale_factor)
 
     if DEBUG:
         aruco_scale_factor.analyze()

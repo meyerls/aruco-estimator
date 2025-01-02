@@ -1,12 +1,14 @@
 [tool.poetry]
 name = "aruco-estimator"
-version = "0.1.0"
+version = "1.1.11"
 description = ""
-authors = ["Nile Walker <nile.walker@jhuapl.edu>"]
+authors = [
+    'Lukas Meyer <lukas.meyer@fau.de>',
+]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "3.8.20"
+python = "^3.8"
 matplotlib = "3.5.2"
 numpy = "1.22.4"
 opencv-contrib-python = "4.6.0.66"
@@ -26,11 +28,9 @@ pandas = "*"
 ruff = "^0.8.4"
 
 [tool.ruff]
-select = ["F403"]  # Enable rule for star imports
+select = ["F403"]  
+extend-select = ["I"]
 
-# # Alternatively, you can use:
-# [tool.ruff.flake8-import-conventions]
-# banned-from-imports = ["*"]
 
 [build-system]
 requires = ["poetry-core"]

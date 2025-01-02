@@ -8,14 +8,14 @@ See LICENSE file for more information.
 """
 
 # Built-in/Generic Imports
-from typing import Union
-from typing import Tuple
+import logging
+from typing import Tuple, Union
 
 # Libs
 import cv2
-from cv2 import aruco
 import matplotlib.pyplot as plt
 import numpy as np
+from cv2 import aruco
 from PIL import Image
 
 

@@ -13,9 +13,10 @@ from typing import Tuple
 # Libs
 import numpy as np
 import open3d as o3d
-from PIL import Image, ImageFont, ImageDraw
-from pyquaternion import Quaternion
 from colmap_wrapper.visualization import generate_line_set
+from PIL import Image, ImageDraw, ImageFont
+from pyquaternion import Quaternion
+
 # Own modules
 
 

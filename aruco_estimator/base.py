@@ -6,15 +6,11 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
-
-# Built-in/Generic Imports
-# ...
-
-# Libs
-# ...
-
 # Own modules
+import logging
+
 from colmap_wrapper.colmap import COLMAPProject
+
 
 class ScaleFactorBase(object):
     def __init__(self, photogrammetry_software: COLMAPProject):

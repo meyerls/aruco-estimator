@@ -5,17 +5,24 @@ Copyright (c) 2022 Lukas Meyer
 Licensed under the MIT License.
 See LICENSE file for more information.
 """
-import numpy as np
+import logging
 import os
-import open3d as o3d
 from copy import deepcopy
 from typing import Union
 
+import numpy as np
+import open3d as o3d
+
 # Own modules
 from colmap_wrapper.colmap import COLMAP
+
 from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
+from aruco_estimator.utils import (
+    align_point_set,
+    manual_registration,
+    plot_aligned_pointset,
+)
 from aruco_estimator.visualization import ArucoVisualization
-from aruco_estimator.utils import align_point_set, plot_aligned_pointset, manual_registration
 
 
 class ArucoMarkerScaledRegistration(object):
