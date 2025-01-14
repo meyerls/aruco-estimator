@@ -4,12 +4,21 @@
 import argparse
 import logging
 from pathlib import Path
+import os
 import numpy as np
-import open3d as o3d
+from aruco_estimator.colmap.read_write_model import (
+    read_model,
+    write_model,
+    Image,
+    Point3D,
+    qvec2rotmat,
+    rotmat2qvec
+)
+import open3d
+from aruco_estimator.colmap.visualize_model import Model
 from scipy.spatial.transform import Rotation
 from colmap_wrapper.colmap import COLMAP, generate_colmap_sparse_pc
 from aruco_estimator.localizers import ArucoLocalizer
-from colmap_wrapper.colmap import write_points3D_text, write_images_text, write_cameras_text
 
 def get_normalization_transform(aruco_corners_3d: np.ndarray) -> np.ndarray:
     """Calculate transformation matrix to normalize coordinates to ArUco marker plane."""
@@ -59,38 +68,58 @@ def get_normalization_transform(aruco_corners_3d: np.ndarray) -> np.ndarray:
     
     # Create full transform
     transform = np.eye(4)
-    transform[:3, :3] = rotation.T
-    transform[:3, 3] = -rotation.T @ aruco_center
+    # transform[:3, :3] = rotation.T
+    # transform[:3, 3] = -rotation.T @ aruco_center
     
     return transform
 
-def normalize_poses_and_points(project: COLMAP, transform: np.ndarray) -> None:
-    """Apply normalization transform to both camera poses and 3D points using COLMAPProject"""
+def normalize_poses_and_points(cameras, images, points3D, transform: np.ndarray):
+    """Apply normalization transform to camera poses and 3D points"""
     # Transform camera poses
-    for image in project.projects.images.values():
-        new_pose = transform @ image.extrinsics
-        image.qvec = Rotation.from_matrix(new_pose[:3, :3]).as_quat()[[3, 0, 1, 2]]  # w,x,y,z order
-        image.tvec = new_pose[:3, 3]
-        image.set_extrinsics(new_pose)
+    transformed_images = {}
+    for image_id, image in images.items():
+        # Get current rotation and translation
+        R = qvec2rotmat(image.qvec)
+        t = image.tvec
+
+        # Apply transformation
+        new_R = transform[:3, :3] @ R
+        new_t = transform[:3, :3] @ t + transform[:3, 3]
+
+        # Create new image with transformed pose
+        transformed_images[image_id] = Image(
+            id=image.id,
+            qvec=rotmat2qvec(new_R),
+            tvec=new_t,
+            camera_id=image.camera_id,
+            name=image.name,
+            xys=image.xys,
+            point3D_ids=image.point3D_ids
+        )
     
     # Transform 3D points
-    rotation = transform[:3, :3]
-    translation = transform[:3, 3]
-    for point3D in project.projects.sparse.values():
-        point3D.xyz = rotation @ point3D.xyz + translation
-    return project
-
-def save_normalized_data(project: COLMAP, output_path: Path) -> None:
-    """Save normalized poses and points using COLMAP structure"""
+    transformed_points3D = {}
+    for point3D_id, point3D in points3D.items():
+        new_xyz = transform[:3, :3] @ point3D.xyz + transform[:3, 3]
+        transformed_points3D[point3D_id] = Point3D(
+            id=point3D.id,
+            xyz=new_xyz,
+            rgb=point3D.rgb,
+            error=point3D.error,
+            image_ids=point3D.image_ids,
+            point2D_idxs=point3D.point2D_idxs
+        )
     
+    return cameras, transformed_images, transformed_points3D
+
+def save_normalized_data(cameras, images, points3D, output_path: Path) -> None:
+    """Save normalized poses and points using COLMAP structure"""
     # Create normalized/sparse directory
     output_dir = output_path / "normalized" / "sparse"
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Use wrapper's built-in writing functions
-    write_points3D_text(project.projects.sparse, output_dir / "points3D.txt")
-    write_images_text(project.projects.images, output_dir / "images.txt")
-    write_cameras_text(project.projects.cameras, output_dir / "cameras.txt")
+    # Write transformed data
+    write_model(cameras, images, points3D, str(output_dir), ".txt")
 
 def main():
     parser = argparse.ArgumentParser(description='Normalize COLMAP poses relative to ArUco marker')
@@ -102,18 +131,14 @@ def main():
     project_path = Path(args.colmap_project)
     logging.basicConfig(level=logging.INFO)
     
-    # Initialize COLMAP project using wrapper
-    logging.info("Initializing COLMAP project...")
-    project = COLMAP(
-        project_path=str(project_path),
-    )
+    # Load COLMAP data
+    logging.info("Loading COLMAP data...")
+    sparse_dir = os.path.join(project_path, "sparse")
+    cameras, images, points3D = read_model(sparse_dir)
     
-    # Get original point cloud
-    original_points = generate_colmap_sparse_pc(project.projects.sparse)
-    original_points.paint_uniform_color([0.7, 0.7, 0.7])  # Gray color
-    
-    # Get ArUco corners
-    logging.info("Detecting ArUco markers and estimating scale...")
+    # Use COLMAP project only for ArUco detection
+    logging.info("Detecting ArUco markers...")
+    project = COLMAP(project_path=str(project_path))
     aruco_localizer = ArucoLocalizer(
         photogrammetry_software=project,
         aruco_size=args.aruco_size,
@@ -125,57 +150,55 @@ def main():
     # Calculate normalization transform
     transform = get_normalization_transform(aruco_corners_3d)
     
-    # Apply normalization
+    # Apply normalization to loaded data
     logging.info("Normalizing poses and 3D points...")
-    project = normalize_poses_and_points(project, transform)
+    cameras_norm, images_norm, points3D_norm = normalize_poses_and_points(cameras, images, points3D, transform)
     
-    # Get transformed point cloud
-    transformed_points = generate_colmap_sparse_pc(project.projects.sparse)
-    # transformed_points.paint_uniform_color([0.7, 0.7, 1.0])  # Light blue color
+    # Create visualization model
+    model = Model()
+    model.create_window()
     
-    # Visualize the transformation
-    logging.info("Visualizing coordinate transformation...")
+    # Add point clouds
+    model.points3D = points3D
+    model.add_points(color=[0.7, 0.7, 0.7])  # Gray for original points
     
-    # Create coordinate frames
-    original_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=2.0)
-    transformed_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1)
-    transformed_frame.transform(transform)
+    model.points3D = points3D_norm
+    model.add_points(color=[0, 0.7, 1])  # Light blue for transformed points
+    
+    # Add coordinate frames
+    model.add_coordinate_frame(size=2.0)  # Original coordinate frame
+    model.add_coordinate_frame(size=1.0, transform=transform)  # Transformed coordinate frame
+    
+    # Add ArUco markers
+    model.add_aruco_marker(aruco_corners_3d, color=[1, 0, 1])  # Magenta for original marker
     
     # Transform ArUco corners to new coordinate system
     transformed_corners = np.array([
         transform[:3, :3] @ corner + transform[:3, 3] 
         for corner in aruco_corners_3d
     ])
-    
-    # Create ArUco marker visualization (transformed)
-    aruco_lines = o3d.geometry.LineSet()
-    aruco_lines.points = o3d.utility.Vector3dVector(transformed_corners)
-    aruco_lines.lines = o3d.utility.Vector2iVector([[0,1], [1,2], [2,3], [3,0]])
-    aruco_lines.colors = o3d.utility.Vector3dVector([[0,1,1] for _ in range(4)])  # Cyan edges
-    
-    # Create point cloud for ArUco corners (transformed)
-    corner_points = o3d.geometry.PointCloud()
-    corner_points.points = o3d.utility.Vector3dVector(transformed_corners)
-    corner_points.paint_uniform_color([1,0,0])  # Red points
+    model.add_aruco_marker(transformed_corners, color=[0, 1, 1])  # Cyan for transformed marker
     
     # Log transformed corners for verification
     logging.info("Transformed ArUco corners:")
     for i, corner in enumerate(transformed_corners):
         logging.info(f"Corner {i}: {corner}")
     
-    # Visualize
-    o3d.visualization.draw_geometries([
-        original_frame,      # Original coordinate system
-        transformed_frame,   # Transformed coordinate system
-        aruco_lines,        # ArUco marker edges
-        corner_points,      # ArUco corner points
-        original_points,     # Original project points (gray)
-        transformed_points   # Transformed project points (light blue)
-    ])
+    # Add cameras
+    model.cameras = cameras
+    model.images = images
+    model.add_cameras(scale=0.25, color=[0.7, 0.7, 0.7])  # Dark yellow for original cameras
     
-    # Save normalized data
+    model.cameras = cameras_norm
+    model.images = images_norm
+    model.add_cameras(scale=0.25, color=[1, 0.5, 0])  # Orange for transformed cameras
+    
+    # Show visualization
+    model.show()
+    
+    # Save transformed data
     logging.info("Saving normalized data...")
-    save_normalized_data(project, project_path)
+    save_normalized_data(cameras_norm, images_norm, points3D_norm, project_path)
     
     logging.info("Done! Normalized data saved to normalized/sparse/")
 
