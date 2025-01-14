@@ -8,6 +8,7 @@ See LICENSE file for more information.
 """
 
 # Built-in/Generic Imports
+import logging
 from typing import Tuple, Union
 
 import cv2
@@ -22,7 +23,6 @@ def ray_cast_aruco_corners(
     extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-
     n = x @ K^-1 @ R.T
 
     :param extrinsics:
@@ -37,42 +37,13 @@ def ray_cast_aruco_corners(
 
     return camera_origin, rays_norm
 
-
-class ArucoDetection:
-    def __init__(self, dict_type: int = cv2.aruco.DICT_4X4_100):
-        """
-        More information on aruco parameters: https://docs.opencv.org/4.x/d1/dcd/structcv_1_1aruco_1_1DetectorParameters.html
-
-        @param dict_type:
-        """
-        self.dict_type = dict_type
-        self.aruco_dict = cv2.aruco.getPredefinedDictionary(dict_type)
-        self.aruco_parameters = cv2.aruco.DetectorParameters()
-        self.aruco_parameters.adaptiveThreshConstant = 7
-        self.aruco_parameters.adaptiveThreshWinSizeMin = 3
-        self.aruco_parameters.adaptiveThreshWinSizeMax = 23
-        self.aruco_parameters.adaptiveThreshWinSizeStep = 10
-        self.aruco_parameters.minMarkerPerimeterRate = 0.03
-        self.aruco_parameters.maxMarkerPerimeterRate = 4.0
-        # aruco_parameters.polygonalApproxAccuracyRate = 0.01
-        # aruco_parameters.minMarkerPerimeterRate = 0.1
-
-    def detect_aruco_marker(
-        self, image: Union[np.ndarray, str]
-    ) -> Tuple[tuple, np.ndarray, np.ndarray]:
-        return detect_aruco_marker(
-            image=image,
-            dict_type=self.aruco_dict,
-            aruco_parameters=self.aruco_parameters,
-        )
-
-
 def detect_aruco_marker(
     image: np.ndarray,
     dict_type: int = cv2.aruco.DICT_4X4_100,
     aruco_parameters: cv2.aruco.DetectorParameters = cv2.aruco.DetectorParameters(),
 ) -> Tuple[tuple, np.ndarray]:
     """
+    Info: https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
     More information on aruco parameters: https://docs.opencv.org/4.x/d1/dcd/structcv_1_1aruco_1_1DetectorParameters.html
 
     @param dict_type:
@@ -92,62 +63,14 @@ def detect_aruco_marker(
     :return:
     """
 
-    # Info: https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
-    aruco_dict = cv2.aruco.getPredefinedDictionary(dict_type)
-    # aruco_parameters = cv2.aruco.DetectorParameters_create()
-
-    detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_parameters)
-
     image = cv2.imread(image)
     if image is None:
         logging.warning(f"Failed to load image: {image}")
         return None, None
     image_size = image.shape
+    aruco_dict = cv2.aruco.getPredefinedDictionary(dict_type)
+    detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_parameters)
     corners, aruco_id, _ = detector.detectMarkers(image)
-
     if aruco_id is None:
         return None, None, image_size
-    if False:
-        if len(corners) > 0:
-            # flatten the ArUco IDs list
-            ids = aruco_id.flatten()
-            # loop over the detected ArUCo corners
-            for markerCorner, markerID in zip(corners, ids):
-                # extract the marker corners (which are always returned in
-                # top-left, top-right, bottom-right, and bottom-left order)
-                corners_plot = markerCorner.reshape((4, 2))
-                (topLeft, topRight, bottomRight, bottomLeft) = corners_plot
-                # convert each of the (x, y)-coordinate pairs to integers
-                topRight = (int(topRight[0]), int(topRight[1]))
-                bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
-                bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
-                topLeft = (int(topLeft[0]), int(topLeft[1]))
-
-                # draw the bounding box of the ArUCo detection
-                cv2.line(image, topLeft, topRight, (0, 255, 0), 5)
-                cv2.line(image, topRight, bottomRight, (0, 255, 0), 5)
-                cv2.line(image, bottomRight, bottomLeft, (0, 255, 0), 5)
-                cv2.line(image, bottomLeft, topLeft, (0, 255, 0), 5)
-                # compute and draw the center (x, y)-coordinates of the ArUco
-                # marker
-                cX = int((topLeft[0] + bottomRight[0]) / 2.0)
-                cY = int((topLeft[1] + bottomRight[1]) / 2.0)
-                cv2.circle(image, (cX, cY), 4, (0, 0, 255), 5)
-                # draw the ArUco marker ID on the image
-                cv2.putText(
-                    image,
-                    str(markerID),
-                    (topLeft[0], topLeft[1] - 15),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (0, 255, 0),
-                    10,
-                )
-
-                plt.imshow(image, cmap="gray")
-                plt.show()
-
-    # del gray
-    del image
-
     return corners, aruco_id, image_size

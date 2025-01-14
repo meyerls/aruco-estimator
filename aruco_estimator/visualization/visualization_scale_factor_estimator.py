@@ -16,12 +16,12 @@ from colmap_wrapper.visualization import (
     generate_line_set,
 )
 
-from ..scale_factor import ArucoScaleFactor
+from ..localizers import ArucoLocalizer
 from .visualization import ray_cast_aruco_corners_visualization
 
 
 class ScaleFactorExtimatorVisualization():
-    def __init__(self, photogrammetry_software: ArucoScaleFactor):
+    def __init__(self, photogrammetry_software: ArucoLocalizer):
         self.scale_factor_estimator = photogrammetry_software
         self.photogrammetry_software = photogrammetry_software.photogrammetry_software
 
@@ -35,7 +35,7 @@ class ScaleFactorExtimatorVisualization():
 
 
 class ArucoVisualization(ScaleFactorExtimatorVisualization):
-    def __init__(self, aruco_colmap: ArucoScaleFactor, bg_color: np.ndarray = np.asarray([1, 1, 1])):
+    def __init__(self, aruco_colmap: ArucoLocalizer, bg_color: np.ndarray = np.asarray([1, 1, 1])):
         super().__init__(aruco_colmap)
 
         self.vis_bg_color = bg_color
@@ -153,7 +153,7 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
         for geometry in self.geometries:
             viewer.add_geometry(geometry)
         opt = viewer.get_render_option()
-        # opt.show_coordinate_frame = True
+        opt.show_coordinate_frame = True
         opt.point_size = point_size
         opt.line_width = 0.01
         opt.background_color = self.vis_bg_color

@@ -13,7 +13,7 @@ import logging
 
 from colmap_wrapper.colmap import COLMAP
 
-from aruco_estimator.scale_factor.aruco_scale_factor import ArucoScaleFactor
+from aruco_estimator.localizers import ArucoLocalizer
 from aruco_estimator.tools import downloader
 
 if __name__ == '__main__':
@@ -44,28 +44,28 @@ if __name__ == '__main__':
                          'dataset by setting the flag --test_data')
 
     project = COLMAP(project_path=args.colmap_project, image_resize=0.4)
-
+    # exit()
     # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
-    aruco_scale_factor = ArucoScaleFactor(photogrammetry_software=project,
+    aruco_localizer = ArucoLocalizer(photogrammetry_software=project,
                                           aruco_size=args.aruco_size,
                                           dense_path=args.dense_model)
-    aruco_distance, aruco_corners_3d = aruco_scale_factor.run()
+    aruco_distance, aruco_corners_3d = aruco_localizer.run()
     logging.info('Size of the unscaled aruco markers: ', aruco_distance)
 
     # Calculate scaling factor and apply to scene
-    dense, scale_factor = aruco_scale_factor.apply()
+    dense, scale_factor = aruco_localizer.apply()
     logging.info('Point cloud and poses are scaled by: ', scale_factor)
     logging.info('Size of the scaled (true to scale) aruco markers in meters: ', aruco_distance * scale_factor)
 
     if DEBUG:
-        aruco_scale_factor.analyze()
+        aruco_localizer.analyze()
 
     # Visualization of the scene and rays BEFORE scaling. This might be necessary for debugging
     if args.visualize:
         from aruco_estimator.visualization import ArucoVisualization
 
-        vis = ArucoVisualization(aruco_colmap=aruco_scale_factor)
+        vis = ArucoVisualization(aruco_colmap=aruco_localizer)
         vis.visualization(frustum_scale=0.7, point_size=0.1)
 
     # Todo: Save output, PCD and poses. Visualize!
-    aruco_scale_factor.write_data()
+    aruco_localizer.write_data()

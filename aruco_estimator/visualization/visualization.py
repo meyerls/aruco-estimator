@@ -17,9 +17,6 @@ from colmap_wrapper.visualization import generate_line_set
 from PIL import Image, ImageDraw, ImageFont
 from pyquaternion import Quaternion
 
-# Own modules
-
-
 def ray_cast_aruco_corners_visualization(p_i: np.ndarray, n_i: np.ndarray, corners3d: np.ndarray) \
         -> o3d.pybind.geometry.LineSet:
     '''

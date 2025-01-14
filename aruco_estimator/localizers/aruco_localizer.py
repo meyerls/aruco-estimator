@@ -12,6 +12,7 @@ from copy import deepcopy
 from functools import partial, wraps
 from multiprocessing import Pool
 from typing import Tuple, Union
+
 import cv2
 import numpy as np
 import open3d as o3d
@@ -31,7 +32,7 @@ from ..opt import (
     ls_intersection_of_lines,
     ls_intersection_of_lines_parallelized,
 )
-from .base import ScaleFactorBase
+from .base import LocalizerBase
 
 
 def timeit(func):
@@ -47,7 +48,7 @@ def timeit(func):
     return timeit_wrapper
 
 
-class ArucoScaleFactor(ScaleFactorBase):
+class ArucoLocalizer(LocalizerBase):
     def __init__(self, photogrammetry_software: Union[COLMAPProject, COLMAP], aruco_size: float,
                  dense_path: str = 'fused.ply'):
         """
@@ -90,7 +91,7 @@ class ArucoScaleFactor(ScaleFactorBase):
         # Aruco specific
         self.aruco_distance = None
         self.aruco_corners_3d = None
-        self.aruco_dict_type = cv2.aruco.DICT_4X4_1000
+        self.aruco_dict_type = cv2.aruco.DICT_4X4_50
 
         # Results
         self.scale_factor = None
@@ -100,7 +101,7 @@ class ArucoScaleFactor(ScaleFactorBase):
         # Multi Processing
         self.progress_bar = True
         self.num_processes = 12 if os.cpu_count() > 12 else os.cpu_count()
-        logging.info('Num process: ', self.num_processes)
+        logging.debug('Num process: %s', self.num_processes)
         self.image_names = []
         # Prepare parsed data for multi processing
         for image_idx in self.photogrammetry_software.images.keys():
@@ -132,19 +133,15 @@ class ArucoScaleFactor(ScaleFactorBase):
 
         :return:
         """
+        # exit()
         with Pool(self.num_processes) as p:
             result = list(tqdm(p.imap(
                 partial(detect_aruco_marker, dict_type=self.aruco_dict_type),
                 self.image_names), total=len(self.image_names), disable=not self.progress_bar))
+        
 
         if len(result) != len(self.photogrammetry_software.images):
             raise ValueError("Thread return has not the same length as the input parameters!")
-
-        # Checks if all tuples in list are None
-        # if not all(all(v) for v in result):
-        #    self.aruco_marker_detected = False
-        # else:
-        #    self.aruco_marker_detected = True
 
         aruco_ids = []
 
@@ -161,7 +158,6 @@ class ArucoScaleFactor(ScaleFactorBase):
 
             self.photogrammetry_software.images[image_key].aruco_id = result[image_idx][1]
             self.photogrammetry_software.images[image_key].image_path = self.image_names[image_idx]
-            # self.images[image_idx].image = cv2.resize(result[image_idx - 1][2], (0, 0), fx=0.3, fy=0.3)
 
         # Only one aruco marker is allowed. Todo: Extend to multiple possible aruco markers
         self.dominant_aruco_id = np.argmax(np.bincount(aruco_ids))
@@ -253,14 +249,9 @@ class ArucoScaleFactor(ScaleFactorBase):
         self.photogrammetry_software.dense_scaled = deepcopy(self.photogrammetry_software.dense)
         self.photogrammetry_software.dense_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
 
-        # self.sparse_scaled = deepcopy(self.get_sparse())
-        # self.sparse_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
-
         self.sparse_scaled = deepcopy(self.photogrammetry_software.sparse)
         for num in self.photogrammetry_software.sparse.keys():
             self.sparse_scaled[num].xyz = self.sparse_scaled[num].xyz * self.scale_factor
-
-        # self.sparse_scaled.scale(scale=self.scale_factor, center=np.asarray([0., 0., 0.]))
 
         # ToDo: Scale tvec and save
         self.photogrammetry_software.images_scaled = deepcopy(self.photogrammetry_software.images)
@@ -284,10 +275,6 @@ class ArucoScaleFactor(ScaleFactorBase):
         write_images_text(self.photogrammetry_software.images_scaled, images_scaled)
         write_points3D_text(self.sparse_scaled, points_scaled)
 
-        # for image_idx in self.photogrammetry_software.images_scaled.keys():
-        #    filename = images_scaled.joinpath('image_{:04d}.txt'.format(image_idx - 1))
-        #    np.savetxt(filename, self.photogrammetry_software.images[image_idx].extrinsics.flatten())
-
         o3d.io.write_point_cloud(os.path.join(pcd_scaled, 'scaled.ply'), self.photogrammetry_software.dense_scaled)
 
         # Save scale factor
@@ -302,16 +289,16 @@ if __name__ == '__main__':
 
     project = COLMAP(project_path='../data/door', image_resize=0.4)
 
-    aruco_scale_factor = ArucoScaleFactor(photogrammetry_software=project, aruco_size=0.15)
-    aruco_distance, aruco_points3d = aruco_scale_factor.run()
+    aruco_localizer = ArucoLocalizer(photogrammetry_software=project, aruco_size=0.15)
+    aruco_distance, aruco_points3d = aruco_localizer.run()
     logging.info('Mean distance between aruco markers: ', aruco_distance)
 
-    aruco_scale_factor.analyze()
+    aruco_localizer.analyze()
 
-    dense, scale_factor = aruco_scale_factor.apply()
+    dense, scale_factor = aruco_localizer.apply()
     logging.info('Point cloud and poses are scaled by: ', scale_factor)
 
-    vis = ArucoVisualization(aruco_colmap=aruco_scale_factor)
+    vis = ArucoVisualization(aruco_colmap=aruco_localizer)
     vis.visualization(frustum_scale=0.7, point_size=0.1)
 
-    aruco_scale_factor.write_data()
+    aruco_localizer.write_data()

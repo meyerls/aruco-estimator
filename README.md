@@ -43,7 +43,7 @@ dataset.download_door_dataset(output_path='.')
 An example of how to use the aruco estimator is shown below.
 
 ````python
-from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
+from aruco_estimator.aruco_localizer import ArucoLocalizer
 from aruco_estimator.visualization import ArucoVisualization
 from aruco_estimator import download
 from colmap_wrapper.colmap import COLMAP
@@ -58,33 +58,33 @@ dataset.download_door_dataset()
 project = COLMAP(project_path=dataset.dataset_path, image_resize=0.4)
 
 # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
-aruco_scale_factor = ArucoScaleFactor(photogrammetry_software=project, aruco_size=dataset.scale)
-aruco_distance, aruco_corners_3d = aruco_scale_factor.run()
+aruco_localizer = ArucoLocalizer(photogrammetry_software=project, aruco_size=dataset.scale)
+aruco_distance, aruco_corners_3d = aruco_localizer.run()
 logging.info('Size of the unscaled aruco markers: ', aruco_distance)
 
 # Calculate scaling factor, apply it to the scene and save scaled point cloud
-dense, scale_factor = aruco_scale_factor.apply() 
+dense, scale_factor = aruco_localizer.apply() 
 logging.info('Point cloud and poses are scaled by: ', scale_factor)
 logging.info('Size of the scaled (true to scale) aruco markers in meters: ', aruco_distance * scale_factor)
 
 # Visualization of the scene and rays 
-vis = ArucoVisualization(aruco_colmap=aruco_scale_factor)
+vis = ArucoVisualization(aruco_colmap=aruco_localizer)
 vis.visualization(frustum_scale=0.7, point_size=0.1)
 
 # Write Data
-aruco_scale_factor.write_data()
+aruco_localizer.write_data()
 ````
 
 ### Registration and Scaling
 
 In some cases COLMAP is not able to registrate all images into one dense reconstruction. If appears to be reconstructed 
 into two seperated reconstruction. To registrate both (up to know only two are possible) reconstructions the aruco 
-markers are used to registrate both sides using ```ArucoMarkerScaledRegistration```.
+markers are used to registrate both sides using ```ArucoRegistration```.
 
 ```python
-from aruco_estimator.registration import ArucoMarkerScaledRegistration
+from aruco_estimator.registration import ArucoRegistration
 
-scaled_registration = ArucoMarkerScaledRegistration(project_path_a=[path2part1],
+scaled_registration = ArucoRegistration(project_path_a=[path2part1],
                                                     project_path_b=[path2part2])
 scaled_registration.scale(debug=True)
 scaled_registration.registrate(manual=False, debug=True)
@@ -125,7 +125,7 @@ repo [COLMAP Utility Scripts](https://github.com/uzh-rpg/colmap_utils) by [uzh-r
 * In some cases cv2 does not detect the aruco marker module. Reinstalling opencv-python and opencv-python-python might
   help [Source](https://stackoverflow.com/questions/45972357/python-opencv-aruco-no-module-named-cv2-aruco)
 * [PyExifTool](https://github.com/sylikc/pyexiftool): A library to communicate with the [ExifTool](https://exiftool.org)
-  command- application. If you have trouble installing it please refer to the PyExifTool-Homepage. 
+    application. If you have trouble installing it please refer to the PyExifTool-Homepage. 
 ```bash
 # For Ubuntu users:
 wget https://exiftool.org/Image-ExifTool-12.51.tar.gz

@@ -12,7 +12,7 @@ import logging
 from colmap_wrapper.colmap import COLMAPProject
 
 
-class ScaleFactorBase(object):
+class LocalizerBase(object):
     def __init__(self, photogrammetry_software: COLMAPProject):
         """
         Base class for scale factor estimation.
