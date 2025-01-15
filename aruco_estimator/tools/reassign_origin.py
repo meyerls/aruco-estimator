@@ -3,22 +3,26 @@
 
 import argparse
 import logging
-from pathlib import Path
 import os
+from pathlib import Path
+
+import cv2
 import numpy as np
+import open3d
+from colmap_wrapper.colmap import COLMAP, generate_colmap_sparse_pc
+from scipy.spatial.transform import Rotation
+
 from aruco_estimator.colmap.read_write_model import (
-    read_model,
-    write_model,
     Image,
     Point3D,
     qvec2rotmat,
-    rotmat2qvec
+    read_model,
+    rotmat2qvec,
+    write_model,
 )
-import open3d
 from aruco_estimator.colmap.visualize_model import Model
-from scipy.spatial.transform import Rotation
-from colmap_wrapper.colmap import COLMAP, generate_colmap_sparse_pc
 from aruco_estimator.localizers import ArucoLocalizer
+
 
 def get_normalization_transform(aruco_corners_3d: np.ndarray) -> np.ndarray:
     """Calculate transformation matrix to normalize coordinates to ArUco marker plane."""
@@ -128,6 +132,7 @@ def main():
     parser.add_argument('--colmap_project', type=str, required=True,
                        help='Path to COLMAP project containing images.txt and points3D.txt')
     parser.add_argument('--aruco_size', type=float, help='Size of the aruco marker in meter.', default=0.2)
+    parser.add_argument('--dict_type', type=int, help='ArUco dictionary type (e.g. cv2.aruco.DICT_4X4_50)', default=cv2.aruco.DICT_5X5_50)
     args = parser.parse_args()
     
     project_path = Path(args.colmap_project)
@@ -144,6 +149,7 @@ def main():
     aruco_localizer = ArucoLocalizer(
         photogrammetry_software=project,
         aruco_size=args.aruco_size,
+        dict_type=args.dict_type
     )
     aruco_distance, aruco_corners_3d = aruco_localizer.run()
     logging.info(f"ArUco 3d points: {aruco_corners_3d}")
@@ -165,7 +171,7 @@ def main():
     model.add_points(color=[0.7, 0.7, 0.7])  # Gray for original points
     
     model.points3D = points3D_norm
-    model.add_points(color=[0, 0.7, 1])  # Light blue for transformed points
+    model.add_points()  # Light blue for transformed points
     
     # Add coordinate frames
     model.add_coordinate_frame(size=2.0)  # Original coordinate frame
@@ -193,7 +199,7 @@ def main():
     
     model.cameras = cameras_norm
     model.images = images_norm
-    model.add_cameras(scale=0.25, color=[1, 0.5, 0])  # Orange for transformed cameras
+    model.add_cameras(scale=0.25, color=[1, 0, 0])  # Orange for transformed cameras
     
     # Show visualization
     model.show()

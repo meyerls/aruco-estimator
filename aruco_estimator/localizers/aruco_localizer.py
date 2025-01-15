@@ -50,7 +50,7 @@ def timeit(func):
 
 class ArucoLocalizer(LocalizerBase):
     def __init__(self, photogrammetry_software: Union[COLMAPProject, COLMAP], aruco_size: float,
-                 dense_path: str = 'fused.ply'):
+                 dense_path: str = 'fused.ply', dict_type: int = cv2.aruco.DICT_4X4_50):
         """
         This class is used to determine 3D points of the aruco marker, which are used to compute a scaling factor.
         In the following the workflow is shortly described.
@@ -91,7 +91,7 @@ class ArucoLocalizer(LocalizerBase):
         # Aruco specific
         self.aruco_distance = None
         self.aruco_corners_3d = None
-        self.aruco_dict_type = cv2.aruco.DICT_4X4_50
+        self.aruco_dict_type = dict_type
 
         # Results
         self.scale_factor = None
