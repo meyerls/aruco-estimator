@@ -68,8 +68,8 @@ def get_normalization_transform(aruco_corners_3d: np.ndarray) -> np.ndarray:
     
     # Create full transform
     transform = np.eye(4)
-    # transform[:3, :3] = rotation.T
-    # transform[:3, 3] = -rotation.T @ aruco_center
+    transform[:3, :3] = rotation.T
+    transform[:3, 3] = -rotation.T @ aruco_center
     
     return transform
 
@@ -82,9 +82,11 @@ def normalize_poses_and_points(cameras, images, points3D, transform: np.ndarray)
         R = qvec2rotmat(image.qvec)
         t = image.tvec
 
-        # Apply transformation
-        new_R = transform[:3, :3] @ R
-        new_t = transform[:3, :3] @ t + transform[:3, 3]
+        # For camera poses, we need to apply the inverse transformation
+        # R_new = R @ R_transform.T
+        # t_new = t - R @ R_transform.T @ t_transform
+        new_R = R @ transform[:3, :3].T
+        new_t = t - R @ transform[:3, :3].T @ transform[:3, 3]
 
         # Create new image with transformed pose
         transformed_images[image_id] = Image(
@@ -200,6 +202,8 @@ def main():
     logging.info("Saving normalized data...")
     save_normalized_data(cameras_norm, images_norm, points3D_norm, project_path)
     
+    logging.info("Done! Normalized data saved to normalized/sparse/")
+
     logging.info("Done! Normalized data saved to normalized/sparse/")
 
 if __name__ == '__main__':
