@@ -11,7 +11,7 @@ def main():
     pass
 
 
-@main.command()
+@main.command('reassign-origin')
 @click.argument('colmap_project', type=click.Path(exists=True))
 @click.option('--aruco-size', type=float, default=0.2,
               help='Size of the aruco marker in meter.')
