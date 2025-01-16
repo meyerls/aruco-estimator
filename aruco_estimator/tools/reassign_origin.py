@@ -23,7 +23,6 @@ from aruco_estimator.colmap.read_write_model import (
 from aruco_estimator.colmap.visualize_model import Model
 from aruco_estimator.localizers import ArucoLocalizer
 
-
 def get_normalization_transform(aruco_corners_3d: np.ndarray) -> np.ndarray:
     """Calculate transformation matrix to normalize coordinates to ArUco marker plane."""
     if len(aruco_corners_3d) != 4:
@@ -32,65 +31,58 @@ def get_normalization_transform(aruco_corners_3d: np.ndarray) -> np.ndarray:
     # Calculate ArUco center
     aruco_center = np.mean(aruco_corners_3d, axis=0)
     
-    # Find the shortest and longest edges to determine marker orientation
-    edges = []
-    for i in range(4):
-        next_i = (i + 1) % 4
-        edge = aruco_corners_3d[next_i] - aruco_corners_3d[i]
-        edges.append((np.linalg.norm(edge), edge, i))
-    edges.sort(key=lambda x: x[0])  # Sort by edge length
-    
-    # Use shortest edge for y direction (typically marker height)
-    # and its perpendicular for x direction (marker width)
-    y_vec = edges[0][1]  # Shortest edge
+    # Calculate vectors defining the ArUco marker orientation
+    y_vec = aruco_corners_3d[0] - aruco_corners_3d[3]
     y_vec = y_vec / np.linalg.norm(y_vec)
     
-    # Find the edge most perpendicular to y_vec
-    perp_scores = []
-    for _, edge, idx in edges[1:]:  # Skip shortest edge
-        edge_norm = edge / np.linalg.norm(edge)
-        # Score based on how close to perpendicular (dot product near 0)
-        score = abs(np.dot(y_vec, edge_norm))
-        perp_scores.append((score, edge_norm, idx))
-    _, x_vec, _ = min(perp_scores, key=lambda x: x[0])
+    x_vec = aruco_corners_3d[0] - aruco_corners_3d[1]
+    x_vec = x_vec / np.linalg.norm(x_vec)
     
     # Calculate z-axis ensuring right-handed coordinate system
     z_vec = np.cross(x_vec, y_vec)
     z_vec = z_vec / np.linalg.norm(z_vec)
     
-    # Ensure z-axis points upward
-    if z_vec[2] < 0:
-        z_vec = -z_vec
-        x_vec = -x_vec  # Flip x to maintain right-handed system
+    # Create source vectors from ArUco orientation
+    source_vectors = np.array([x_vec, y_vec, z_vec])
     
-    # Ensure y is exactly perpendicular
-    y_vec = np.cross(z_vec, x_vec)
-    y_vec = y_vec / np.linalg.norm(y_vec)
+    # Define target vectors (unit vectors)
+    target_vectors = np.array([
+        [1, 0, 0],  # Unit x
+        [0, 1, 0],  # Unit y
+        [0, 0, 1]   # Unit z
+    ])
     
-    # Create rotation matrix
-    rotation = np.stack([x_vec, y_vec, z_vec], axis=0)
+    # Find rotation to align ArUco vectors with unit vectors
+    rot, rmsd = Rotation.align_vectors(target_vectors, source_vectors)
     
     # Create full transform
     transform = np.eye(4)
-    transform[:3, :3] = rotation.T
-    transform[:3, 3] = -rotation.T @ aruco_center
+    transform[:3, :3] = rot.as_matrix()
+    transform[:3, 3] = -rot.as_matrix() @ aruco_center
     
     return transform
-
 def normalize_poses_and_points(cameras, images, points3D, transform: np.ndarray):
     """Apply normalization transform to camera poses and 3D points"""
     # Transform camera poses
     transformed_images = {}
     for image_id, image in images.items():
-        # Get current rotation and translation
+        # Get current camera pose as 4x4 matrix
         R = qvec2rotmat(image.qvec)
         t = image.tvec
+        pose = np.eye(4)
+        pose[:3, :3] = R
+        pose[:3, 3] = t
 
         # For camera poses, we need to apply the inverse transformation
-        # R_new = R @ R_transform.T
-        # t_new = t - R @ R_transform.T @ t_transform
-        new_R = R @ transform[:3, :3].T
-        new_t = t - R @ transform[:3, :3].T @ transform[:3, 3]
+        # Compute inverse of transform matrix
+        transform_inv = np.linalg.inv(transform)
+        
+        # Apply transformation
+        new_pose = pose @ transform_inv
+        
+        # Extract new rotation and translation
+        new_R = new_pose[:3, :3]
+        new_t = new_pose[:3, 3]
 
         # Create new image with transformed pose
         transformed_images[image_id] = Image(
@@ -103,10 +95,15 @@ def normalize_poses_and_points(cameras, images, points3D, transform: np.ndarray)
             point3D_ids=image.point3D_ids
         )
     
-    # Transform 3D points
+    # Transform 3D points using full homogeneous transformation
     transformed_points3D = {}
     for point3D_id, point3D in points3D.items():
-        new_xyz = transform[:3, :3] @ point3D.xyz + transform[:3, 3]
+        # Convert to homogeneous coordinates
+        point_h = np.append(point3D.xyz, 1)
+        # Apply full 4x4 transformation
+        transformed_h = transform @ point_h
+        # Convert back to 3D coordinates (divide by w)
+        new_xyz = transformed_h[:3] / transformed_h[3]
         transformed_points3D[point3D_id] = Point3D(
             id=point3D.id,
             xyz=new_xyz,
@@ -132,7 +129,8 @@ def main():
     parser.add_argument('--colmap_project', type=str, required=True,
                        help='Path to COLMAP project containing images.txt and points3D.txt')
     parser.add_argument('--aruco_size', type=float, help='Size of the aruco marker in meter.', default=0.2)
-    parser.add_argument('--dict_type', type=int, help='ArUco dictionary type (e.g. cv2.aruco.DICT_4X4_50)', default=cv2.aruco.DICT_5X5_50)
+    parser.add_argument('--dict_type', type=int, help='ArUco dictionary type (e.g. cv2.aruco.DICT_4X4_50)', default=cv2.aruco.DICT_4X4_50)
+    parser.add_argument('--show_original', action='store_true', help='Show original points and cameras in visualization')
     args = parser.parse_args()
     
     project_path = Path(args.colmap_project)
@@ -167,35 +165,35 @@ def main():
     model.create_window()
     
     # Add point clouds
-    model.points3D = points3D
-    model.add_points(color=[0.7, 0.7, 0.7])  # Gray for original points
+    if args.show_original:
+        model.points3D = points3D
+        model.add_points(color=[0.7, 0.7, 0.7])  # Gray for original points
     
     model.points3D = points3D_norm
     model.add_points()  # Light blue for transformed points
     
     # Add coordinate frames
-    model.add_coordinate_frame(size=2.0)  # Original coordinate frame
-    model.add_coordinate_frame(size=1.0, transform=transform)  # Transformed coordinate frame
+    if args.show_original:
+        model.add_coordinate_frame(size=1.0, transform=transform)  # Transformed coordinate frame
+    model.add_coordinate_frame(size=2.0)  # True coordinate frame
+
     
     # Add ArUco markers
-    model.add_aruco_marker(aruco_corners_3d, color=[1, 0, 1])  # Magenta for original marker
+    if args.show_original:
+        model.add_aruco_marker(aruco_corners_3d, color=[1, 0, 1])  # Magenta for original marker
     
-    # Transform ArUco corners to new coordinate system
+    # Transform ArUco corners to new coordinate system using homogeneous coordinates
     transformed_corners = np.array([
-        transform[:3, :3] @ corner + transform[:3, 3] 
+        (transform @ np.append(corner, 1))[:3] / (transform @ np.append(corner, 1))[3]
         for corner in aruco_corners_3d
     ])
     model.add_aruco_marker(transformed_corners, color=[0, 1, 1])  # Cyan for transformed marker
     
-    # Log transformed corners for verification
-    logging.info("Transformed ArUco corners:")
-    for i, corner in enumerate(transformed_corners):
-        logging.info(f"Corner {i}: {corner}")
-    
     # Add cameras
-    model.cameras = cameras
-    model.images = images
-    model.add_cameras(scale=0.25, color=[0.7, 0.7, 0.7])  # Dark yellow for original cameras
+    if args.show_original:
+        model.cameras = cameras
+        model.images = images
+        model.add_cameras(scale=0.25, color=[0.7, 0.7, 0.7])  # Dark yellow for original cameras
     
     model.cameras = cameras_norm
     model.images = images_norm
