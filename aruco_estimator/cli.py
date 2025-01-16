@@ -1,27 +1,36 @@
 
-# your_package/cli.py
 import click
+import cv2
+
+from aruco_estimator.tools.reassign_origin import reassign_origin
 
 
 @click.group()
 def main():
-    """Your CLI tool description"""
+    """ArUco Estimator CLI tool."""
     pass
 
-@main.command()
-@click.argument('name')
-@click.option('--greeting', '-g', default='Hello', help='Greeting to use')
-def greet(name, greeting):
-    """Greet someone."""
-    click.echo(f"{greeting}, {name}!")
 
 @main.command()
-@click.argument('x', type=float)
-@click.argument('y', type=float)
-def add(x, y):
-    """Add two numbers."""
-    result = x + y
-    click.echo(f"Result: {result}")
+@click.argument('colmap_project', type=click.Path(exists=True))
+@click.option('--aruco-size', type=float, default=0.2,
+              help='Size of the aruco marker in meter.')
+@click.option('--dict-type', type=int, default=cv2.aruco.DICT_4X4_50,
+              help='ArUco dictionary type (e.g. cv2.aruco.DICT_4X4_50)')
+@click.option('--show-original', is_flag=True,
+              help='Show original points and cameras in visualization')
+@click.option('--visualize', is_flag=True,
+              help='Show visualization of the normalized points and cameras')
+def reassign_origin_cmd(colmap_project, aruco_size, dict_type, show_original, visualize):
+    """Normalize COLMAP poses relative to ArUco marker."""
+    reassign_origin(
+        colmap_project=colmap_project,
+        aruco_size=aruco_size,
+        dict_type=dict_type,
+        show_original=show_original,
+        visualize=visualize
+    )
+
 
 if __name__ == '__main__':
     main()

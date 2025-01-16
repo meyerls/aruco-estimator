@@ -1,11 +1,11 @@
 # #!/usr/bin/env python
 # # -*- coding: utf-8 -*-
 
-import argparse
 import logging
 import os
 from pathlib import Path
 
+import click
 import cv2
 import numpy as np
 import open3d
@@ -122,18 +122,13 @@ def save_normalized_data(cameras, images, points3D, output_path: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Write transformed data
-    write_model(cameras, images, points3D, str(output_dir), ".txt")
+    write_model(cameras, images, points3D, str(output_dir))
 
-def main():
-    parser = argparse.ArgumentParser(description='Normalize COLMAP poses relative to ArUco marker')
-    parser.add_argument('--colmap_project', type=str, required=True,
-                       help='Path to COLMAP project containing images.txt and points3D.txt')
-    parser.add_argument('--aruco_size', type=float, help='Size of the aruco marker in meter.', default=0.2)
-    parser.add_argument('--dict_type', type=int, help='ArUco dictionary type (e.g. cv2.aruco.DICT_4X4_50)', default=cv2.aruco.DICT_4X4_50)
-    parser.add_argument('--show_original', action='store_true', help='Show original points and cameras in visualization')
-    args = parser.parse_args()
-    
-    project_path = Path(args.colmap_project)
+def reassign_origin(colmap_project: str, aruco_size: float = 0.2,
+                   dict_type: int = cv2.aruco.DICT_4X4_50,
+                   show_original: bool = False, visualize: bool = False):
+    """Normalize COLMAP poses relative to ArUco marker."""
+    project_path = Path(colmap_project)
     logging.basicConfig(level=logging.INFO)
     
     # Load COLMAP data
@@ -146,8 +141,8 @@ def main():
     project = COLMAP(project_path=str(project_path))
     aruco_localizer = ArucoLocalizer(
         photogrammetry_software=project,
-        aruco_size=args.aruco_size,
-        dict_type=args.dict_type
+        aruco_size=aruco_size,
+        dict_type=dict_type
     )
     aruco_distance, aruco_corners_3d = aruco_localizer.run()
     logging.info(f"ArUco 3d points: {aruco_corners_3d}")
@@ -160,55 +155,51 @@ def main():
     logging.info("Normalizing poses and 3D points...")
     cameras_norm, images_norm, points3D_norm = normalize_poses_and_points(cameras, images, points3D, transform)
     
-    # Create visualization model
-    model = Model()
-    model.create_window()
-    
-    # Add point clouds
-    if args.show_original:
-        model.points3D = points3D
-        model.add_points(color=[0.7, 0.7, 0.7])  # Gray for original points
-    
-    model.points3D = points3D_norm
-    model.add_points()  # Light blue for transformed points
-    
-    # Add coordinate frames
-    if args.show_original:
-        model.add_coordinate_frame(size=1.0, transform=transform)  # Transformed coordinate frame
-    model.add_coordinate_frame(size=2.0)  # True coordinate frame
+    if visualize:
+        # Create visualization model
+        model = Model()
+        model.create_window()
+        
+        # Add point clouds
+        if show_original:
+            model.points3D = points3D
+            model.add_points(color=[0.7, 0.7, 0.7])  # Gray for original points
+        
+        model.points3D = points3D_norm
+        model.add_points()  # Light blue for transformed points
+        
+        # Add coordinate frames
+        if show_original:
+            model.add_coordinate_frame(size=1.0, transform=transform)  # Transformed coordinate frame
+        model.add_coordinate_frame(size=2.0)  # True coordinate frame
 
-    
-    # Add ArUco markers
-    if args.show_original:
-        model.add_aruco_marker(aruco_corners_3d, color=[1, 0, 1])  # Magenta for original marker
-    
-    # Transform ArUco corners to new coordinate system using homogeneous coordinates
-    transformed_corners = np.array([
-        (transform @ np.append(corner, 1))[:3] / (transform @ np.append(corner, 1))[3]
-        for corner in aruco_corners_3d
-    ])
-    model.add_aruco_marker(transformed_corners, color=[0, 1, 1])  # Cyan for transformed marker
-    
-    # Add cameras
-    if args.show_original:
-        model.cameras = cameras
-        model.images = images
-        model.add_cameras(scale=0.25, color=[0.7, 0.7, 0.7])  # Dark yellow for original cameras
-    
-    model.cameras = cameras_norm
-    model.images = images_norm
-    model.add_cameras(scale=0.25, color=[1, 0, 0])  # Orange for transformed cameras
-    
-    # Show visualization
-    model.show()
+        
+        # Add ArUco markers
+        if show_original:
+            model.add_aruco_marker(aruco_corners_3d, color=[1, 0, 1])  # Magenta for original marker
+        
+        # Transform ArUco corners to new coordinate system using homogeneous coordinates
+        transformed_corners = np.array([
+            (transform @ np.append(corner, 1))[:3] / (transform @ np.append(corner, 1))[3]
+            for corner in aruco_corners_3d
+        ])
+        model.add_aruco_marker(transformed_corners, color=[0, 1, 1])  # Cyan for transformed marker
+        
+        # Add cameras
+        if show_original:
+            model.cameras = cameras
+            model.images = images
+            model.add_cameras(scale=0.25, color=[0.7, 0.7, 0.7])  # Dark yellow for original cameras
+        
+        model.cameras = cameras_norm
+        model.images = images_norm
+        model.add_cameras(scale=0.25, color=[1, 0, 0])  # Orange for transformed cameras
+        
+        # Show visualization
+        model.show()
     
     # Save transformed data
     logging.info("Saving normalized data...")
     save_normalized_data(cameras_norm, images_norm, points3D_norm, project_path)
     
     logging.info("Done! Normalized data saved to normalized/sparse/")
-
-    logging.info("Done! Normalized data saved to normalized/sparse/")
-
-if __name__ == '__main__':
-    main()
