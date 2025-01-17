@@ -23,6 +23,7 @@ from aruco_estimator.colmap.read_write_model import (
 from aruco_estimator.colmap.visualize_model import Model
 from aruco_estimator.localizers import ArucoLocalizer
 
+
 def get_normalization_transform(aruco_corners_3d: np.ndarray) -> np.ndarray:
     """Calculate transformation matrix to normalize coordinates to ArUco marker plane."""
     if len(aruco_corners_3d) != 4:

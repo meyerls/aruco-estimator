@@ -1,7 +1,10 @@
 import os
-import numpy as np
+
 import cv2
-from aruco_estimator.colmap.read_write_model import *
+import numpy as np
+
+from aruco_estimator.colmap.read_write_model import read_model
+
 
 def read_key_positions(filepath):
     """Read key positions from file."""
@@ -67,33 +70,11 @@ def project_points(points, cam_params, rvec, tvec):
 
 def draw_axes(img, cam_params, rvec, tvec, length=1):
     """Draw 3D coordinate axes on image."""
-    # Camera matrix
-    if cam_params.model == "SIMPLE_PINHOLE":
-        fx = fy = cam_params.params[0]
-        cx, cy = cam_params.params[1:]
-        dist_coeffs = np.zeros(4)
-    elif cam_params.model == "PINHOLE":
-        fx, fy = cam_params.params[0:2]
-        cx, cy = cam_params.params[2:]
-        dist_coeffs = np.zeros(4)
-    elif cam_params.model == "SIMPLE_RADIAL":
-        fx = fy = cam_params.params[0]
-        cx, cy = cam_params.params[1:3]
-        k = cam_params.params[3]
-        dist_coeffs = np.array([k, 0, 0, 0])  # k1, k2, p1, p2
-    else:
-        raise ValueError(f"Unsupported camera model: {cam_params.model}")
-    
-    K = np.array([[fx, 0, cx],
-                  [0, fy, cy],
-                  [0, 0, 1]])
-
     # Define axis points in 3D
     axis_points = np.float32([[0,0,0], [length,0,0], [0,length,0], [0,0,length]])
     
-    # Project points
-    img_points, _ = cv2.projectPoints(axis_points, rvec, tvec, K, dist_coeffs)
-    img_points = img_points.reshape(-1, 2)
+    # Project points using existing function
+    img_points = project_points(axis_points, cam_params, rvec, tvec)
     
     # Draw axes
     origin = tuple(map(int, img_points[0]))
@@ -139,19 +120,28 @@ def create_label_content(projected_points, img_shape, class_id=0, visibility=2):
     
     return " ".join(label_parts)
 
-if __name__ == "__main__":
-    # Set paths
-    base_dir = "/Users/walkenz1/Projects/aruco-estimator/data/1_15_25"
-    camera_dir = "C1"
-    colmap_path = os.path.join(base_dir, camera_dir, "colmap", "sparse")
+def reverse_project(colmap_path, images_path, output_dir, key_positions_path=None, 
+                   grid_min=(-2,-2,-2), grid_max=(2,2,2), grid_points=4,
+                   skip_copy=False):
+    """
+    Project 3D points onto images and create dataset.
     
+    Args:
+        colmap_path: Path to COLMAP sparse reconstruction directory
+        images_path: Path to directory containing source images
+        output_dir: Path to output directory for processed images and labels
+        key_positions_path: Optional path to key positions text file
+        grid_min: Minimum coordinates for grid (x,y,z)
+        grid_max: Maximum coordinates for grid (x,y,z) 
+        grid_points: Number of points per dimension in grid
+    """
     # Create dataset structure
-    dataset_root = os.path.join(base_dir, camera_dir, "dataset")
-    images_dir = os.path.join(dataset_root, "images")
-    labels_dir = os.path.join(dataset_root, "labels")
+    vis_dir = os.path.join(output_dir, "visualizations")
+    labels_dir = os.path.join(output_dir, "labels")
     
     # Create directories
-    os.makedirs(images_dir, exist_ok=True)
+    if not skip_copy:
+        os.makedirs(vis_dir, exist_ok=True)
     os.makedirs(labels_dir, exist_ok=True)
     
     # Read COLMAP model
@@ -162,7 +152,7 @@ if __name__ == "__main__":
         print(f"Processing {image.name}...")
         
         # Load image
-        img_path = os.path.join(base_dir, camera_dir, "images", image.name)
+        img_path = os.path.join(images_path, image.name)
         img = cv2.imread(img_path)
         if img is None:
             print(f"Could not load image: {img_path}")
@@ -180,9 +170,9 @@ if __name__ == "__main__":
         tvec = t.reshape(3,1)
         
         # Create and project dense grid of points
-        grid_points = create_dense_grid(min_coords=(-2,-2,-2), max_coords=(2,2,2), num_points=4)
-        colors = color_points_by_xyz(grid_points)
-        projected_points = project_points(grid_points, cam_params, rvec, tvec)
+        points = create_dense_grid(min_coords=grid_min, max_coords=grid_max, num_points=grid_points)
+        colors = color_points_by_xyz(points)
+        projected_points = project_points(points, cam_params, rvec, tvec)
         
         # Draw grid points
         for point, color in zip(projected_points, colors):
@@ -194,8 +184,7 @@ if __name__ == "__main__":
         img = draw_axes(img, cam_params, rvec, tvec, length=2)
         
         # Read and project key positions
-        key_positions_path = os.path.join(base_dir, camera_dir, "key_positions.txt")
-        if os.path.exists(key_positions_path):
+        if key_positions_path and os.path.exists(key_positions_path):
             key_points = read_key_positions(key_positions_path)
             projected_key_points = project_points(key_points, cam_params, rvec, tvec)
             
@@ -213,7 +202,8 @@ if __name__ == "__main__":
                 if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
                     cv2.circle(img, (x, y), 15, (0, 255, 255), 3)
         
-        # Save image
-        output_path = os.path.join(images_dir, image.name)
-        cv2.imwrite(output_path, img)
-        print(f"Saved to: {output_path}")
+        # Save visualization if not skipping
+        if not skip_copy:
+            output_path = os.path.join(vis_dir, f"vis_{image.name}")
+            cv2.imwrite(output_path, img)
+            print(f"Saved visualization to: {output_path}")
