@@ -1603,6 +1603,42 @@ files = [
 tests = ["pytest"]
 
 [[package]]
+name = "pyceres"
+version = "2.4"
+description = "Factor graph optimization with Ceres, in Python"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pyceres-2.4-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:630a2f6f9ddf5cd3e87cc33a4bab3554be8bc8529ed078ae1485c5f80f69095a"},
+    {file = "pyceres-2.4-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:dd591c48e2ae1a322cd5261d4af615eee9d7ac45b21b7b0dadffdd4b5fbf1e00"},
+    {file = "pyceres-2.4-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:3d8cac30fdf0dbf02265eea6ec5e6dbc29917c41978291a6e35e12b1393add2c"},
+    {file = "pyceres-2.4-cp310-cp310-win_amd64.whl", hash = "sha256:f05045d5160d2a48f9938f57e09371da91444c9465d4ca11f9e0a87859fdfa21"},
+    {file = "pyceres-2.4-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:a332b9ce22255a52a96de8afaa763ac0125f82900bd32bc6cbff1e856bac527f"},
+    {file = "pyceres-2.4-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:32d9b3b6d5e34b7f066b94fc9969cc8798cbc756f4e304ec92dac615f12d8ab8"},
+    {file = "pyceres-2.4-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:9d20b6c49342524d4435f481037d6eb218b6b7541264cfdceb968e2bace2f8c0"},
+    {file = "pyceres-2.4-cp311-cp311-win_amd64.whl", hash = "sha256:0cef9d02a9078a7cc7e1f3886844c32c6fa769985cb439f044f7a6af0e294e9d"},
+    {file = "pyceres-2.4-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:e9baccb6f977cb346d78880b755bdb7df9e0c2af5dc65dc8907d8ffeb0fb92af"},
+    {file = "pyceres-2.4-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:6c8131228a77d914f444197147a543b707353d6d2746b00da8b12933ad5b56fc"},
+    {file = "pyceres-2.4-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:e6cc1bc211f187824915162b9420ed9ded530be0eeb5f7aec8530573b8e10de9"},
+    {file = "pyceres-2.4-cp312-cp312-win_amd64.whl", hash = "sha256:b44263723fdf32be2db0d0e8602986bccea8c6e488b2dcdd05188141fc840680"},
+    {file = "pyceres-2.4-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:e3baa6372d762f5c9a623608d618b2e10828197b4610ac95a21bb7d143051730"},
+    {file = "pyceres-2.4-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:ecd531018ee34842e884d7ae040d8e02e2f5688ab2866cd7a2bebf27c8497eac"},
+    {file = "pyceres-2.4-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:afe1e5c72c81993a6fe690c12b7f24007da926aa4a5f38cad8aa1bd7602a6721"},
+    {file = "pyceres-2.4-cp313-cp313-win_amd64.whl", hash = "sha256:fce0138f0d90a3f68950cbe1bcc2dfc6145138028cc4fede6c2462e4d0865df0"},
+    {file = "pyceres-2.4-cp38-cp38-macosx_10_12_x86_64.whl", hash = "sha256:39f5d3564c3b1c60ccc5bc3f19f1edb5748aa7834f242ed3848e3e03a9c46988"},
+    {file = "pyceres-2.4-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:061b7399f89c2ec6f99df30bacf003eb4f3dfbe485b57e9d44c27e4632138ba3"},
+    {file = "pyceres-2.4-cp38-cp38-manylinux_2_28_x86_64.whl", hash = "sha256:bc478762b8925369ac5cd4340cf121f818ff5180e3b77e8c71bccfe9b3ccc8af"},
+    {file = "pyceres-2.4-cp38-cp38-win_amd64.whl", hash = "sha256:f0f37be3b6bcd33254eb8ffdecc666616b38f8a3c80f6e65094ea6aa9fbc2e20"},
+    {file = "pyceres-2.4-cp39-cp39-macosx_10_12_x86_64.whl", hash = "sha256:8f10f0eab04f51db0abc0356ecbfe6a1741e5d4f518808bf527dbc4efa44c25f"},
+    {file = "pyceres-2.4-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:310f128908f19a5a2b47830b6cdead432060e070935b834ab0462d7e2659da36"},
+    {file = "pyceres-2.4-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:361b8f802da149b848de8174a24ce44bbd9b6111b76bfe1b6cfe67d867f57ebd"},
+    {file = "pyceres-2.4-cp39-cp39-win_amd64.whl", hash = "sha256:b556287027fdc188f016431690f160d90cb6a14762d635306d63a1ce41ba0a32"},
+]
+
+[package.dependencies]
+numpy = "*"
+
+[[package]]
 name = "pycolmap"
 version = "3.11.1"
 description = "COLMAP bindings"
@@ -2473,4 +2509,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "2d1ae746d077fc7fb2cebd7c7db0bab2bedffdbb7427c848b3f41c43beefe370"
+content-hash = "b4ab5813b2d4f852e410640f85b6ce6995aa93002b2b4b69246ca6420e7c0b60"
