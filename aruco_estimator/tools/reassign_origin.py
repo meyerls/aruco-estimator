@@ -47,10 +47,11 @@ def get_normalization_transform(aruco_corners_3d: np.ndarray) -> np.ndarray:
     source_vectors = np.array([x_vec, y_vec, z_vec])
     
     # Define target vectors (unit vectors)
+    # Patch For Nerfstudio Alignment
     target_vectors = np.array([
         [1, 0, 0],  # Unit x
-        [0, 1, 0],  # Unit y
-        [0, 0, 1]   # Unit z
+        [0, 0, 1],  # Unit y
+        [0, 1, 0]   # Unit z
     ])
     
     # Find rotation to align ArUco vectors with unit vectors
