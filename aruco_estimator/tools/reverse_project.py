@@ -126,28 +126,41 @@ def create_label_content(projected_points, img_shape, in_front, class_id=0):
     # Point is visible if it's both in front of camera and within image bounds
     is_visible = np.logical_and(in_front, in_bounds)
     
-    # Normalize all point coordinates
-    norm_points = normalize_coordinates(projected_points.copy(), img_shape)
+    # Get valid points for bounding box calculation (not NaN)
+    valid_mask = ~np.isnan(projected_points).any(axis=1)
+    valid_points = projected_points[valid_mask]
     
-    # Calculate bounding box from points
-    x_min, y_min = np.min(norm_points, axis=0)
-    x_max, y_max = np.max(norm_points, axis=0)
-    
-    # Calculate center and dimensions
-    x_center = (x_min + x_max) / 2
-    y_center = (y_min + y_max) / 2
-    width = x_max - x_min
-    height = y_max - y_min
+    if len(valid_points) == 0:
+        # If all points are NaN, use center of image for bounding box
+        x_center, y_center = 0.5, 0.5
+        width, height = 0.0, 0.0
+    else:
+        # Normalize valid points and calculate bounding box
+        norm_valid_points = normalize_coordinates(valid_points.copy(), img_shape)
+        x_min, y_min = np.min(norm_valid_points, axis=0)
+        x_max, y_max = np.max(norm_valid_points, axis=0)
+        
+        # Calculate center and dimensions
+        x_center = (x_min + x_max) / 2
+        y_center = (y_min + y_max) / 2
+        width = x_max - x_min
+        height = y_max - y_min
     
     # Format label line
     label_parts = [str(class_id), f"{x_center:.6f}", f"{y_center:.6f}", 
                    f"{width:.6f}", f"{height:.6f}"]
     
-    # Add keypoints with visibility based on combined visibility check
-    for (x, y), visible in zip(norm_points, is_visible):
-        # Set visibility to 2 if point is visible (in front and in bounds), 0 otherwise
-        visibility = 2 if visible else 0
-        label_parts.extend([f"{x:.6f}", f"{y:.6f}", str(visibility)])
+    # Add keypoints
+    for i, ((x, y), visible) in enumerate(zip(projected_points, is_visible)):
+        if np.isnan(x) or np.isnan(y):
+            # Set NaN points to 0,0 with visibility 0
+            label_parts.extend(["0.000000", "0.000000", "0"])
+        else:
+            # Normalize and add valid points
+            norm_x = x / img_shape[1]
+            norm_y = y / img_shape[0]
+            visibility = 2 if visible else 0
+            label_parts.extend([f"{norm_x:.6f}", f"{norm_y:.6f}", str(visibility)])
     
     return " ".join(label_parts)
 
