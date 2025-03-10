@@ -22,14 +22,24 @@ def main():
               help='Show original points and cameras in visualization')
 @click.option('--visualize', is_flag=True,
               help='Show visualization of the normalized points and cameras')
-def reassign_origin_cmd(colmap_project, aruco_size, dict_type, show_original, visualize):
+@click.option('--target-id', type=int, default=0,
+              help='ID of ArUco marker to use as origin (default: 0)')
+@click.option('--export-tags', is_flag=True,
+              help='Export ArUco tag positions to a JSON file')
+@click.option('--export-path', type=click.Path(),
+              help='Path to export ArUco tag positions (default: project_path/aruco_tags.json)')
+def reassign_origin_cmd(colmap_project, aruco_size, dict_type, show_original, visualize, 
+                        target_id, export_tags, export_path):
     """Normalize COLMAP poses relative to ArUco marker."""
     reassign_origin(
         colmap_project=colmap_project,
         aruco_size=aruco_size,
         dict_type=dict_type,
         show_original=show_original,
-        visualize=visualize
+        visualize=visualize,
+        target_id=target_id,
+        export_tags=export_tags,
+        export_path=export_path
     )
 
 
