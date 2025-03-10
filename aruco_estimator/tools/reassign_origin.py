@@ -213,6 +213,50 @@ def reassign_origin(colmap_project: str, aruco_size: float = 0.2,
         ])
         model.add_aruco_marker(transformed_corners, color=[0, 1, 1])  # Cyan for transformed marker
         
+        # Add all detected ArUco markers
+        if export_tags:  # We only have all markers if export_tags was True
+            logging.info("Visualizing all detected ArUco markers...")
+            all_aruco_positions = aruco_localizer.get_all_aruco_positions()
+            
+            # Define a list of colors for different ArUco markers
+            colors = [
+                [1, 0, 0],    # Red
+                [0, 1, 0],    # Green
+                [0, 0, 1],    # Blue
+                [1, 1, 0],    # Yellow
+                [1, 0, 1],    # Magenta
+                [0, 1, 1],    # Cyan
+                [0.5, 0.5, 0],  # Olive
+                [0.5, 0, 0.5],  # Purple
+                [0, 0.5, 0.5],  # Teal
+                [0.7, 0.3, 0.3]  # Brown
+            ]
+            
+            # Loop through all detected ArUco markers
+            for i, (aruco_id, corners) in enumerate(all_aruco_positions.items()):
+                # Skip the target marker as it's already visualized
+                if aruco_id == target_id:
+                    continue
+                
+                # Choose a color based on the index
+                color_idx = i % len(colors)
+                
+                if show_original:
+                    # Add original marker
+                    model.add_aruco_marker(corners, color=colors[color_idx])
+                
+                # Transform marker corners to new coordinate system
+                transformed_marker_corners = np.array([
+                    (transform @ np.append(corner, 1))[:3] / (transform @ np.append(corner, 1))[3]
+                    for corner in corners
+                ])
+                
+                # Add transformed marker with color indicating the ArUco ID
+                model.add_aruco_marker(transformed_marker_corners, color=colors[color_idx])
+                
+                # Note: We're using different colors to distinguish different ArUco markers
+                # Color mapping is based on the index in the colors list
+        
         # Add cameras
         if show_original:
             model.cameras = cameras
