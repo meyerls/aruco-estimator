@@ -24,8 +24,8 @@ from aruco_estimator.colmap.visualize_model import Model
 from aruco_estimator.localizers import ArucoLocalizer
 
 
-def get_normalization_transform(aruco_corners_3d: np.ndarray) -> np.ndarray:
-    """Calculate transformation matrix to normalize coordinates to ArUco marker plane."""
+def get_normalization_transform(aruco_corners_3d: np.ndarray, aruco_size: float) -> np.ndarray:
+    """Calculate transformation matrix to normalize coordinates to ArUco marker plane with correct scaling."""
     if len(aruco_corners_3d) != 4:
         raise ValueError(f"Expected 4 ArUco corners, got {len(aruco_corners_3d)}")
     
@@ -34,10 +34,12 @@ def get_normalization_transform(aruco_corners_3d: np.ndarray) -> np.ndarray:
     
     # Calculate vectors defining the ArUco marker orientation
     y_vec = aruco_corners_3d[0] - aruco_corners_3d[3]
-    y_vec = y_vec / np.linalg.norm(y_vec)
+    y_vec_length = np.linalg.norm(y_vec)
+    y_vec = y_vec / y_vec_length
     
     x_vec = aruco_corners_3d[0] - aruco_corners_3d[1]
-    x_vec = x_vec / np.linalg.norm(x_vec)
+    x_vec_length = np.linalg.norm(x_vec)
+    x_vec = x_vec / x_vec_length
     
     # Calculate z-axis ensuring right-handed coordinate system
     z_vec = np.cross(x_vec, y_vec)
@@ -57,12 +59,31 @@ def get_normalization_transform(aruco_corners_3d: np.ndarray) -> np.ndarray:
     # Find rotation to align ArUco vectors with unit vectors
     rot, rmsd = Rotation.align_vectors(target_vectors, source_vectors)
     
-    # Create full transform
+    # Create rotation matrix
+    rot_matrix = rot.as_matrix()
+    
+    # Calculate scaling factor based on ArUco side lengths vs. expected size
+    measured_width = x_vec_length
+    measured_height = y_vec_length
+    
+    # Average the dimensions for uniform scaling
+    avg_measured_size = (measured_width + measured_height) / 2
+    
+    # Compute scaling factor 
+    scale_factor = aruco_size / avg_measured_size
+    logging.info(f"ArUco measured width: {measured_width:.4f}, height: {measured_height:.4f}")
+    logging.info(f"Scaling factor: {scale_factor:.4f} to match target size {aruco_size}")
+    
+    # Apply scaling to rotation matrix
+    scaled_rot_matrix = rot_matrix * scale_factor
+    
+    # Create full transform with scaling
     transform = np.eye(4)
-    transform[:3, :3] = rot.as_matrix()
-    transform[:3, 3] = -rot.as_matrix() @ aruco_center
+    transform[:3, :3] = scaled_rot_matrix
+    transform[:3, 3] = -scaled_rot_matrix @ aruco_center
     
     return transform
+
 def normalize_poses_and_points(cameras, images, points3D, transform: np.ndarray):
     """Apply normalization transform to camera poses and 3D points"""
     # Transform camera poses
@@ -176,12 +197,24 @@ def reassign_origin(colmap_project: str, aruco_size: float = 0.2,
         all_aruco_positions = aruco_localizer.get_all_aruco_positions()
         logging.info(f"Found {len(all_aruco_positions)} ArUco markers")
     
-    # Calculate normalization transform
-    transform = get_normalization_transform(aruco_corners_3d)
+    # Calculate normalization transform with scaling
+    transform = get_normalization_transform(aruco_corners_3d, aruco_size)
     
     # Apply normalization to loaded data
     logging.info("Normalizing poses and 3D points...")
     cameras_norm, images_norm, points3D_norm = normalize_poses_and_points(cameras, images, points3D, transform)
+    
+    # Verify the scaling worked correctly by measuring the marker in the transformed space
+    transformed_corners = np.array([
+        (transform @ np.append(corner, 1))[:3] / (transform @ np.append(corner, 1))[3]
+        for corner in aruco_corners_3d
+    ])
+    
+    # Measure transformed marker dimensions
+    transformed_width = np.linalg.norm(transformed_corners[0] - transformed_corners[1])
+    transformed_height = np.linalg.norm(transformed_corners[0] - transformed_corners[3])
+    logging.info(f"Normalized ArUco dimensions: width={transformed_width:.4f}, height={transformed_height:.4f}")
+    logging.info(f"Target ArUco size: {aruco_size}")
     
     if visualize:
         # Create visualization model
@@ -206,11 +239,6 @@ def reassign_origin(colmap_project: str, aruco_size: float = 0.2,
         if show_original:
             model.add_aruco_marker(aruco_corners_3d, color=[1, 0, 1])  # Magenta for original marker
         
-        # Transform ArUco corners to new coordinate system using homogeneous coordinates
-        transformed_corners = np.array([
-            (transform @ np.append(corner, 1))[:3] / (transform @ np.append(corner, 1))[3]
-            for corner in aruco_corners_3d
-        ])
         model.add_aruco_marker(transformed_corners, color=[0, 1, 1])  # Cyan for transformed marker
         
         # Add all detected ArUco markers
@@ -281,6 +309,14 @@ def reassign_origin(colmap_project: str, aruco_size: float = 0.2,
                 (transform @ np.append(corner, 1))[:3] / (transform @ np.append(corner, 1))[3]
                 for corner in corners
             ])
+            
+            # Verify the scaling for each marker
+            if aruco_id == target_id:
+                # This is our reference marker, should match aruco_size
+                width = np.linalg.norm(transformed_corners[0] - transformed_corners[1])
+                height = np.linalg.norm(transformed_corners[0] - transformed_corners[3])
+                logging.info(f"Exported target ArUco marker {aruco_id}: width={width:.4f}, height={height:.4f}")
+            
             transformed_aruco_positions[int(aruco_id)] = transformed_corners.tolist()
         
         # Save to JSON file

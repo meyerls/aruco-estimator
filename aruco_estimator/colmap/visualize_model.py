@@ -152,12 +152,13 @@ class Model:
             frame.transform(transform)
         self.__vis.add_geometry(frame)
 
-    def add_aruco_marker(self, corners, color=[1, 0, 1]):
+    def add_aruco_marker(self, corners, color=[1, 0, 1], corner_size=0.10):
         """Add ArUco marker visualization.
         
         Args:
             corners: Array of 4 corner points
             color: RGB color for marker edges
+            corner_size: Size of corner spheres
         """
         # Create ArUco marker visualization
         aruco_lines = open3d.geometry.LineSet()
@@ -165,12 +166,16 @@ class Model:
         aruco_lines.lines = open3d.utility.Vector2iVector([[0,1], [1,2], [2,3], [3,0]])
         aruco_lines.colors = open3d.utility.Vector3dVector([color for _ in range(4)])
         
-        corner_points = open3d.geometry.PointCloud()
-        corner_points.points = open3d.utility.Vector3dVector(corners)
-        corner_points.paint_uniform_color([1,1,0])  # Yellow points
-        
+        # Add lines
         self.__vis.add_geometry(aruco_lines)
-        self.__vis.add_geometry(corner_points)
+        
+        # Add corner spheres instead of points for better visibility
+        corner_color = [1, 1, 0]  # Yellow corners
+        for corner in corners:
+            sphere = open3d.geometry.TriangleMesh.create_sphere(radius=corner_size)
+            sphere.translate(corner)
+            sphere.paint_uniform_color(corner_color)
+            self.__vis.add_geometry(sphere)
 
     def show(self):
         self.__vis.poll_events()
