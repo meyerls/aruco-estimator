@@ -32,6 +32,18 @@ This repository is tested on Python 3.6+ and can be installed from [PyPi](https:
 pip install aruco-estimator
 ````
 
+### From Source (Conda)
+
+```
+conda create -n arenv python=3.9
+conda activate arenv
+conda install -c conda-forge exiftool
+pip install -r requirements.txt
+python aruco_estimator/download_dataset.py
+python example.py
+```
+
+
 ## Usage
 
 ### Dataset
