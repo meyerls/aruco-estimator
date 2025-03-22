@@ -47,19 +47,20 @@ def download(url: str, output_dir: str, overwrite: bool = False):
     return filename
 
 
-def extract_images(filename: str, output_dir: str, images_internal_path="door/images"):
-    # opening the zip_file file in READ mode
-    with ZipFile(filename, "r") as zip_file:
-        logging.info("Extracting all the files now...")
-        if False:
-            zip_file.extractall(path=output_dir)
-        else:
-            # Extract only the images folder; the rest we will reconstruct via pycolmap
-            for member in zip_file.namelist():
-                if member.startswith(images_internal_path):
-                    zip_file.extract(member, path=output_dir)
+def extract_from_zip(src_path:str, dst_path:str, zip_path:str):
+    """
+    Extract a file from a zip file
+    """
+    temp_extract_dir = 'temp_extract'
+    os.makedirs(temp_extract_dir, exist_ok=True)
 
-    logging.info("Done!")
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extract(src_path, path=temp_extract_dir)
+
+    os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+    extracted_file_path = os.path.join(temp_extract_dir, src_path)
+    shutil.copy(extracted_file_path, dst_path)
+    shutil.rmtree(temp_extract_dir)
 
 
 class Dataset:
@@ -70,11 +71,11 @@ class Dataset:
         self.data_path = None
         self.scale = None  # in cm
 
-    def download_door_dataset(self):
-        self.download_dataset(**DOOR_DATASET)
+    def download_door_dataset(self, extract_all:bool):
+        self.download_dataset(**DOOR_DATASET, extract_all=extract_all)
 
     def download_dataset(
-        self, data_path: str, zip_path: str, url: str, file_hash: str, scale: float
+        self, data_path: str, zip_path: str, url: str, file_hash: str, scale: float, extract_all:bool = True
     ):
         self.filename = zip_path = Path(zip_path)
         self.data_path = Path(data_path)
@@ -93,8 +94,16 @@ class Dataset:
         if self.data_path.is_dir():
             shutil.rmtree(self.data_path)
 
-        # Extract the images
-        extract_images(filename=self.filename, output_dir=self.data_path.parent)
+        # Extract the data from the zipfile
+        logging.info("Extracting files from ZIP now...")
+        with ZipFile(self.filename, "r") as zip_file:
+            if extract_all:
+                zip_file.extractall(path=self.data_path.parent)
+            else:
+                # Extract only the images folder; the rest we will reconstruct via pycolmap
+                for member in zip_file.namelist():
+                    if member.startswith(images_internal_path):
+                        zip_file.extract(member, path=self.data_path.parent)
 
         return self.dataset_path
 

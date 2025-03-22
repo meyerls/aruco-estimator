@@ -4,21 +4,7 @@ import zipfile
 from pathlib import Path
 import pycolmap
 
-def extract_from_zip(src_path:str, dst_path:str, zip_path:str):
-    """
-    Extract a file from a zip file
-    """
-    temp_extract_dir = 'temp_extract'
-    os.makedirs(temp_extract_dir, exist_ok=True)
-
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extract(src_path, path=temp_extract_dir)
-
-    os.makedirs(os.path.dirname(dst_path), exist_ok=True)
-    extracted_file_path = os.path.join(temp_extract_dir, src_path)
-    shutil.copy(extracted_file_path, dst_path)
-    shutil.rmtree(temp_extract_dir)
-
+from .downloader import extract_from_zip
 
 def generate_colmap(image_path:str):
     # Given image_path, run COLMAP to generate

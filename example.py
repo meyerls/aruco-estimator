@@ -11,17 +11,20 @@ from aruco_estimator.tools.colmap_recon import generate_colmap
 import aruco_estimator.patch_colmap
 from colmap_wrapper.colmap import COLMAP
 
+DO_COLMAP_STEP = False
+
 def main():
     dataset = Dataset()
 
     # Download example dataset. Door dataset is roughly 200 MB
     DOOR_TAG_ID = 7
-    dataset.download_door_dataset()
 
-    # Build the colmap reconstruction just from the images
-    generate_colmap(image_path=Path(dataset.dataset_path) / 'images')
-
-    import code; code.interact(banner='tag1', local=locals())
+    if DO_COLMAP_STEP:
+        dataset.download_door_dataset(extract_all=False)
+        # Build the colmap reconstruction just from the images
+        generate_colmap(image_path=Path(dataset.dataset_path) / 'images')
+    else:
+        dataset.download_door_dataset(extract_all=True)
 
     # Load Colmap project folder
     project = COLMAP(project_path=dataset.dataset_path, image_resize=0.4)
