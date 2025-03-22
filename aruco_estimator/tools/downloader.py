@@ -6,6 +6,7 @@ See LICENSE file for more information.
 
 import logging
 import os
+import shutil
 import urllib.request
 from zipfile import ZipFile
 import hashlib
@@ -31,6 +32,8 @@ class DownloadProgressBar(tqdm):
 
 
 def download(url: str, output_dir: str, overwrite: bool = False):
+    os.makedirs(output_dir, exist_ok=True)
+
     filename = os.path.join(output_dir, url.split("/")[-1])
 
     if os.path.exists(filename) and not overwrite:
@@ -44,16 +47,19 @@ def download(url: str, output_dir: str, overwrite: bool = False):
     return filename
 
 
-def extract(filename: str, output_dir: str):
+def extract_images(filename: str, output_dir: str, images_internal_path="door/images"):
     # opening the zip_file file in READ mode
     with ZipFile(filename, "r") as zip_file:
-        # printing all the contents of the zip_file file
-        # zip_file.printdir()
-
-        # extracting all the files
         logging.info("Extracting all the files now...")
-        zip_file.extractall(path=output_dir)
-        logging.info("Done!")
+        if False:
+            zip_file.extractall(path=output_dir)
+        else:
+            # Extract only the images folder; the rest we will reconstruct via pycolmap
+            for member in zip_file.namelist():
+                if member.startswith(images_internal_path):
+                    zip_file.extract(member, path=output_dir)
+
+    logging.info("Done!")
 
 
 class Dataset:
@@ -70,17 +76,25 @@ class Dataset:
     def download_dataset(
         self, data_path: str, zip_path: str, url: str, file_hash: str, scale: float
     ):
-        zip_path = Path(zip_path)
+        self.filename = zip_path = Path(zip_path)
         self.data_path = Path(data_path)
         self.dataset_path = str(Path(data_path).resolve())
         self.dataset_name = self.data_path.stem
         self.scale = scale  # m
 
-        if (not zip_path.is_file()) or (not self.data_path.is_dir()):
-            self.filename = download(url=url, output_dir=self.data_path, overwrite=True)
+        # Download the zip file if necessary
+        if not zip_path.is_file():
+            self.filename = download(url=url, output_dir=self.data_path.parent, overwrite=True)
+            assert Path(self.filename) == zip_path
             cur_hash = hashlib.sha256(zip_path.read_bytes()).hexdigest()
             assert file_hash == cur_hash, f"ZIP hash of {url} doesn't match {zip_path}"
-            extract(filename=self.filename, output_dir=data_path)
+
+        # Clear the data if it already exists
+        if self.data_path.is_dir():
+            shutil.rmtree(self.data_path)
+
+        # Extract the images
+        extract_images(filename=self.filename, output_dir=self.data_path.parent)
 
         return self.dataset_path
 

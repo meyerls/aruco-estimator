@@ -5,12 +5,11 @@ from pathlib import Path
 from aruco_estimator.localizers import ArucoLocalizer
 from aruco_estimator.visualization import ArucoVisualization
 from aruco_estimator.tools.downloader import Dataset
+from aruco_estimator.tools.colmap_recon import generate_colmap
 
 # This patches pycolmap to fix a bug in colmap_wrapper
 import aruco_estimator.patch_colmap
-
 from colmap_wrapper.colmap import COLMAP
-
 
 def main():
     dataset = Dataset()
@@ -18,6 +17,11 @@ def main():
     # Download example dataset. Door dataset is roughly 200 MB
     DOOR_TAG_ID = 7
     dataset.download_door_dataset()
+
+    # Build the colmap reconstruction just from the images
+    generate_colmap(image_path=Path(dataset.dataset_path) / 'images')
+
+    import code; code.interact(banner='tag1', local=locals())
 
     # Load Colmap project folder
     project = COLMAP(project_path=dataset.dataset_path, image_resize=0.4)
