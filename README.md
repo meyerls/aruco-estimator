@@ -20,25 +20,31 @@ with [COLMAP](https://colmap.github.io/) by placing an aruco marker into the sce
 
 This repository is tested on Python 3.6+ and can be installed from [PyPi](https://pypi.org/project/aruco-estimator)
 
-````angular2html
+```bash
 pip install aruco-estimator
-````
+```
+
+However, the above is out of date and broken as of 2025-03-22.  Better use this fork:
+
+```
+pip install -y git+https://github.com/NWalker4483/aruco-estimator.git
+```
+
+### From Source (Conda)
+
+```bash
+git clone https://github.com/NWalker4483/aruco-estimator.git
+cd aruco-estimator
+conda create -n -y arenv python=3.9
+conda activate arenv
+conda install -c -y conda-forge exiftool
+pip install .
+python example.py
+```
 
 ## Usage
 
-### Dataset
-
-An exemplary data set is provided. The dataset shows a simple scene of a door with an aruco marker. Other dataset might
-follow in future work. It can be downloaded by using
-
-````python
-from aruco_estimator import download
-
-dataset = download.Dataset()
-dataset.download_door_dataset(output_path='.')
-````
-
-### Scale Factor Estimation
+### Scale Factor Estimation Example
 
 An example of how to use the aruco estimator is shown below.
 
@@ -52,7 +58,7 @@ import open3d as o3d
 
 # Download example dataset. Door dataset is roughly 200 MB
 dataset = download.Dataset()
-dataset.download_door_dataset()
+dataset.download_door_dataset(output_path='.')
 
 # Load Colmap project folder
 project = COLMAP(project_path=dataset.dataset_path, image_resize=0.4)
