@@ -7,11 +7,13 @@ import pycolmap
 from .downloader import extract_from_zip
 
 def generate_colmap(image_path:str):
-    # Given image_path, run COLMAP to generate
+    """
+    # Given image_path /images, invoke pycolmap to generate 4 files:
     #    /sparse/cameras.bin
     #    /sparse/images.bin
     #    /sparse/points3D.bin
     #    /fused.ply
+    """
 
     parent_path = Path(image_path).parent
 
