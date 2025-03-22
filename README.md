@@ -24,16 +24,13 @@ This repository is tested on Python 3.6+ and can be installed from [PyPi](https:
 pip install aruco-estimator
 ```
 
-However, the above is out of date and broken as of 2025-03-22.  Better use this fork:
+However, the above is out of date and broken as of 2025-03-22.  Instead, you should install from source:
 
-```
-pip install -y git+https://github.com/NWalker4483/aruco-estimator.git
-```
 
 ### From Source (Conda)
 
 ```bash
-git clone https://github.com/NWalker4483/aruco-estimator.git
+git clone https://github.com/MichaelCurrie/aruco-estimator.git
 cd aruco-estimator
 conda create -n -y arenv python=3.9
 conda activate arenv
@@ -42,61 +39,20 @@ pip install .
 python example.py
 ```
 
-### From Source (Conda)
-
-```
-conda create -n arenv python=3.9
-conda activate arenv
-conda install -c conda-forge exiftool
-pip install -r requirements.txt
-python aruco_estimator/download_dataset.py
-python example.py
-```
-
-
 ## Usage
 
 ### Scale Factor Estimation Example
 
-An example of how to use the aruco estimator is shown below.
+A runnable example with a dataset taken from a door is available by running:
 
-````python
-from aruco_estimator.aruco_localizer import ArucoLocalizer
-from aruco_estimator.visualization import ArucoVisualization
-from aruco_estimator import download
-from colmap_wrapper.colmap import COLMAP
-import os
-import open3d as o3d
-
-# Download example dataset. Door dataset is roughly 200 MB
-dataset = download.Dataset()
-dataset.download_door_dataset(output_path='.')
-
-# Load Colmap project folder
-project = COLMAP(project_path=dataset.dataset_path, image_resize=0.4)
-
-# Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
-aruco_localizer = ArucoLocalizer(photogrammetry_software=project, aruco_size=dataset.scale)
-aruco_distance, aruco_corners_3d = aruco_localizer.run()
-logging.info('Size of the unscaled aruco markers: ', aruco_distance)
-
-# Calculate scaling factor, apply it to the scene and save scaled point cloud
-dense, scale_factor = aruco_localizer.apply() 
-logging.info('Point cloud and poses are scaled by: ', scale_factor)
-logging.info('Size of the scaled (true to scale) aruco markers in meters: ', aruco_distance * scale_factor)
-
-# Visualization of the scene and rays 
-vis = ArucoVisualization(aruco_colmap=aruco_localizer)
-vis.visualization(frustum_scale=0.7, point_size=0.1)
-
-# Write Data
-aruco_localizer.write_data()
-````
+```bash
+python example.py
+```
 
 ### Registration and Scaling
 
-In some cases COLMAP is not able to registrate all images into one dense reconstruction. If appears to be reconstructed 
-into two seperated reconstruction. To registrate both (up to know only two are possible) reconstructions the aruco 
+In some cases COLMAP is not able to "registrate" all images into one dense reconstruction. If appears to be reconstructed 
+into two seperated reconstruction. To registrate both (for now, only two are possible) reconstructions the ArUco 
 markers are used to registrate both sides using ```ArucoRegistration```.
 
 ```python
