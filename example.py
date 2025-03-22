@@ -1,12 +1,20 @@
-from aruco_estimator.aruco_localizer import ArucoLocalizer
-from aruco_estimator.visualization import ArucoVisualization
-from aruco_estimator import download
-from colmap_wrapper.colmap import COLMAP
 import os
+
+from pathlib import Path
 import open3d as o3d
 
+from aruco_estimator.localizers import ArucoLocalizer
+from aruco_estimator.visualization import ArucoVisualization
+from aruco_estimator.tools.downloader import Dataset
+
+# This patches pycolmap
+import aruco_estimator.patch_colmap
+
+from colmap_wrapper.colmap import COLMAP
+
+dataset = Dataset()
+
 # Download example dataset. Door dataset is roughly 200 MB
-dataset = download.Dataset()
 dataset.download_door_dataset()
 
 # Load Colmap project folder
