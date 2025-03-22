@@ -42,6 +42,18 @@ pip install .
 python example.py
 ```
 
+### From Source (Conda)
+
+```
+conda create -n arenv python=3.9
+conda activate arenv
+conda install -c conda-forge exiftool
+pip install -r requirements.txt
+python aruco_estimator/download_dataset.py
+python example.py
+```
+
+
 ## Usage
 
 ### Scale Factor Estimation Example
