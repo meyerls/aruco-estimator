@@ -11,7 +11,7 @@ from aruco_estimator.tools.colmap_recon import generate_colmap
 import aruco_estimator.patch_colmap
 from colmap_wrapper.colmap import COLMAP
 
-DO_COLMAP_STEP = False
+DO_COLMAP_STEP = True
 DOOR_TAG_ID = 7
 
 def main():

@@ -100,6 +100,7 @@ class Dataset:
             if extract_all:
                 zip_file.extractall(path=self.data_path.parent)
             else:
+                images_internal_path = data_path.stem + '/images'
                 # Extract only the images folder; the rest we will reconstruct via pycolmap
                 for member in zip_file.namelist():
                     if member.startswith(images_internal_path):

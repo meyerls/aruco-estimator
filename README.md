@@ -29,6 +29,24 @@ However, the above is out of date and broken as of 2025-03-22.  Instead, you sho
 
 ### From Source (Conda)
 
+(A GPU is required for CUDA because we must do dense reconstruction)
+
+First, install COLMAP with CUDA bindings (Here are the commands for Powershell):
+
+```powershell
+rd /s /q C:\colmap
+
+curl -L -o C:\colmap.zip https://github.com/colmap/colmap/releases/download/3.11.1/colmap-x64-windows-cuda.zip
+
+:: Extract the ZIP file to C:\colmapcommand
+powershell -Command "Expand-Archive -Path C:\colmap.zip -DestinationPath C:\colmap"
+
+:: Update the PATH for the current session
+set PATH=C:\colmap\bin;%PATH%
+```
+
+Then install the aruco-estimator repo and run the example script:
+
 ```bash
 git clone https://github.com/MichaelCurrie/aruco-estimator.git
 cd aruco-estimator

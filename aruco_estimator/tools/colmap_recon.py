@@ -6,6 +6,8 @@ import pycolmap
 
 from .downloader import extract_from_zip
 
+DO_DENSE_RECONSTRUCTION = True
+
 def generate_colmap(image_path:str):
     """
     # Given image_path /images, invoke pycolmap to generate 4 files:
@@ -95,15 +97,14 @@ def generate_colmap(image_path:str):
         output_type='COLMAP'
     )
 
-    if False:
+    if DO_DENSE_RECONSTRUCTION:
         # WE CANNOT DO THIS PROPERLY SINCE WE NEED TO BUILD WITH CUDA
         # 5. Compute depth maps with patch-match stereo
         # (requires compilation with CUDA)
-        # pycolmap.patch_match_stereo(workspace_path=dense_workspace)
+        pycolmap.patch_match_stereo(workspace_path=dense_workspace)
 
         # 6. Fuse depth maps into a dense point cloud saved as fused.ply
-        # pycolmap.stereo_fusion(workspace_path=dense_workspace, output_path=fused_output)
-        pass
+        pycolmap.stereo_fusion(workspace_path=dense_workspace, output_path=fused_output)
     else:
         # KLUDGE: Just grab the file from the ZIP for now
         extract_from_zip(src_path='door/fused.ply', dst_path=fused_output, zip_path=str(parent_path) + '.zip')
