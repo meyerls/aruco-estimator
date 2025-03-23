@@ -3,7 +3,6 @@ from pathlib import Path
 
 # This patches pycolmap to fix a bug in colmap_wrapper
 import aruco_estimator.patch_colmap  # noqa: F401
-import cv2
 from aruco_estimator.localizers import ArucoLocalizer
 from aruco_estimator.tools.colmap_recon import generate_colmap
 from aruco_estimator.tools.downloader import DOOR_DATASET, Dataset
@@ -11,10 +10,8 @@ from aruco_estimator.visualization import ArucoVisualization
 from colmap_wrapper.colmap import COLMAP
 
 DO_COLMAP_STEP = True
-CUR_TAG_ID = 7
 
-DICT_TYPE = cv2.aruco.DICT_4X4_50
-# DICT_TYPE = cv2.aruco.DICT_4X4_1000
+DATASET_DICT = DOOR_DATASET
 
 
 def main():
@@ -22,11 +19,11 @@ def main():
 
     if DO_COLMAP_STEP:
         # Download example dataset. Door dataset is roughly 200 MB
-        dataset.download_dataset(**DOOR_DATASET, extract_all=False)
+        dataset.download_dataset(**DATASET_DICT, extract_all=False)
         # Build the colmap reconstruction just from the images
         generate_colmap(image_path=Path(dataset.dataset_path) / "images")
     else:
-        dataset.download_dataset(**DOOR_DATASET, extract_all=True)
+        dataset.download_dataset(**DATASET_DICT, extract_all=True)
 
     # Load Colmap project folder
     project = COLMAP(project_path=dataset.dataset_path, image_resize=0.4)
@@ -35,8 +32,8 @@ def main():
     aruco_localizer = ArucoLocalizer(
         photogrammetry_software=project,
         aruco_size=dataset.scale,
-        target_id=CUR_TAG_ID,
-        dict_type=DICT_TYPE,
+        target_id=DATASET_DICT["tag_id"],
+        dict_type=DATASET_DICT["dict_type"],
     )
     aruco_distance, aruco_corners_3d = aruco_localizer.run()
     logging.info("Size of the unscaled aruco markers: ", aruco_distance)

@@ -12,6 +12,7 @@ import urllib.request
 from pathlib import Path
 from zipfile import ZipFile
 
+import cv2
 from tqdm import tqdm
 
 DOOR_DATASET = {
@@ -20,6 +21,8 @@ DOOR_DATASET = {
     "data_path": Path("data") / "door",
     "zip_path": Path("data") / "door.zip",
     "scale": 0.15,
+    "tag_id": 7,
+    "dict_type": cv2.aruco.DICT_4X4_50,
 }
 
 
