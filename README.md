@@ -28,9 +28,18 @@ However, the above is out of date and broken as of 2025-03-22.  Instead, you sho
 
 ### From Source (Conda)
 
-(A GPU is required for CUDA because we must do dense reconstruction)
+First, check that you have an NVIDIA GPU, because a GPU is required with CUDA for `colmap patch_match_stereo --workspace_path data\door\dense`.
 
-First, install COLMAP with CUDA bindings (Here are the commands for Powershell):
+```bash
+# Check the max version your computer is CAPABLE of running: 
+nvidia-smi
+# Check the CUDA version you have installed:
+nvcc --version
+```
+
+This version must be something higher than 11 I think, for the COLMAP with CUDA bindings below to work.  If you can upgrade, then do so first.  If you cannot, then you won't be able to do dense reconstructions and therefore you won't be able to use this library.
+
+Next, install COLMAP with CUDA bindings.  Here are the commands for Windows Powershell:
 
 ```powershell
 rd /s /q C:\colmap
@@ -44,7 +53,7 @@ powershell -Command "Expand-Archive -Path C:\colmap.zip -DestinationPath C:\colm
 set PATH=C:\colmap\bin;%PATH%
 ```
 
-Then install the aruco-estimator repo and run the example script:
+Finally, install the aruco-estimator repo and run the example script:
 
 ```bash
 git clone https://github.com/MichaelCurrie/aruco-estimator.git
