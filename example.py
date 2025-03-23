@@ -13,8 +13,8 @@ from colmap_wrapper.colmap import COLMAP
 DO_COLMAP_STEP = True
 CUR_TAG_ID = 7
 
-# DICT_TYPE = cv2.aruco.DICT_4X4_50
-DICT_TYPE = cv2.aruco.DICT_4X4_1000
+DICT_TYPE = cv2.aruco.DICT_4X4_50
+# DICT_TYPE = cv2.aruco.DICT_4X4_1000
 
 
 def main():
