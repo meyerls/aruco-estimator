@@ -50,9 +50,9 @@ Then install the aruco-estimator repo and run the example script:
 ```bash
 git clone https://github.com/MichaelCurrie/aruco-estimator.git
 cd aruco-estimator
-conda create -n -y arenv python=3.9
+conda create -n arenv python=3.9 -y
 conda activate arenv
-conda install -c -y conda-forge exiftool
+conda install -c conda-forge exiftool -y
 pip install .
 python example.py
 ```
