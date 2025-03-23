@@ -3,6 +3,7 @@ from pathlib import Path
 
 # This patches pycolmap to fix a bug in colmap_wrapper
 import aruco_estimator.patch_colmap  # noqa: F401
+import cv2
 from aruco_estimator.localizers import ArucoLocalizer
 from aruco_estimator.tools.colmap_recon import generate_colmap
 from aruco_estimator.tools.downloader import DOOR_DATASET, Dataset
@@ -11,6 +12,9 @@ from colmap_wrapper.colmap import COLMAP
 
 DO_COLMAP_STEP = True
 CUR_TAG_ID = 7
+
+# DICT_TYPE = cv2.aruco.DICT_4X4_50
+DICT_TYPE = cv2.aruco.DICT_4X4_1000
 
 
 def main():
@@ -29,7 +33,10 @@ def main():
 
     # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
     aruco_localizer = ArucoLocalizer(
-        photogrammetry_software=project, aruco_size=dataset.scale, target_id=CUR_TAG_ID
+        photogrammetry_software=project,
+        aruco_size=dataset.scale,
+        target_id=CUR_TAG_ID,
+        dict_type=DICT_TYPE,
     )
     aruco_distance, aruco_corners_3d = aruco_localizer.run()
     logging.info("Size of the unscaled aruco markers: ", aruco_distance)
