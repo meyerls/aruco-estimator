@@ -211,3 +211,6 @@ def generate_colmap(image_path: str):
             dst_path=fused_output,
             zip_path=str(parent_path) + ".zip",
         )
+
+    # For some reason it is supposed to go here:
+    shutil.copy(fused_output, str(dense_workspace / "fused.ply"))
