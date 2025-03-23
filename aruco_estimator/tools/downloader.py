@@ -4,15 +4,14 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
+import hashlib
 import logging
 import os
 import shutil
 import urllib.request
-from zipfile import ZipFile
-import hashlib
 from pathlib import Path
+from zipfile import ZipFile
 
-import wget
 from tqdm import tqdm
 
 DOOR_DATASET = {
@@ -31,30 +30,28 @@ class DownloadProgressBar(tqdm):
         self.update(b * bsize - self.n)
 
 
-def download(url: str, output_dir: str, overwrite: bool = False):
-    os.makedirs(output_dir, exist_ok=True)
+def download(url: str, zip_path: str, overwrite: bool = False):
+    os.makedirs(Path(zip_path).parent, exist_ok=True)
 
-    filename = os.path.join(output_dir, url.split("/")[-1])
-
-    if os.path.exists(filename) and not overwrite:
-        logging.info("{} already exists in {}".format(url.split("/")[-1], output_dir))
+    if os.path.exists(zip_path) and not overwrite:
+        logging.info(f"{zip_path} already exists")
     else:
         with DownloadProgressBar(
-            unit="B", unit_scale=True, miniters=1, desc=url.split("/")[-1]
+            unit="B", unit_scale=True, miniters=1, desc=Path(zip_path).stem
         ) as t:
-            urllib.request.urlretrieve(url, filename=filename, reporthook=t.update_to)
+            urllib.request.urlretrieve(url, filename=zip_path, reporthook=t.update_to)
 
-    return filename
+    return zip_path
 
 
-def extract_from_zip(src_path:str, dst_path:str, zip_path:str):
+def extract_from_zip(src_path: str, dst_path: str, zip_path: str):
     """
     Extract a file from a zip file
     """
-    temp_extract_dir = 'temp_extract'
+    temp_extract_dir = "temp_extract"
     os.makedirs(temp_extract_dir, exist_ok=True)
 
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extract(src_path, path=temp_extract_dir)
 
     os.makedirs(os.path.dirname(dst_path), exist_ok=True)
@@ -67,17 +64,22 @@ class Dataset:
     def __init__(self):
         self.dataset_name = None
         self.dataset_path = None
-        self.filename = None
         self.data_path = None
         self.scale = None  # in cm
 
-    def download_door_dataset(self, extract_all:bool):
+    def download_door_dataset(self, extract_all: bool):
         self.download_dataset(**DOOR_DATASET, extract_all=extract_all)
 
     def download_dataset(
-        self, data_path: str, zip_path: str, url: str, file_hash: str, scale: float, extract_all:bool = True
+        self,
+        data_path: str,
+        zip_path: str,
+        url: str,
+        file_hash: str,
+        scale: float,
+        extract_all: bool = True,
     ):
-        self.filename = zip_path = Path(zip_path)
+        zip_path = Path(zip_path)
         self.data_path = Path(data_path)
         self.dataset_path = str(Path(data_path).resolve())
         self.dataset_name = self.data_path.stem
@@ -85,10 +87,11 @@ class Dataset:
 
         # Download the zip file if necessary
         if not zip_path.is_file():
-            self.filename = download(url=url, output_dir=self.data_path.parent, overwrite=True)
-            assert Path(self.filename) == zip_path
+            download(url=url, zip_path=zip_path, overwrite=True)
             cur_hash = hashlib.sha256(zip_path.read_bytes()).hexdigest()
-            assert file_hash == cur_hash, f"ZIP hash of {url} doesn't match {zip_path}"
+            assert (
+                file_hash == cur_hash
+            ), f"ZIP hash of {url} doesn't match {zip_path}; new is {cur_hash}"
 
         # Clear the data if it already exists
         if self.data_path.is_dir():
@@ -96,11 +99,11 @@ class Dataset:
 
         # Extract the data from the zipfile
         logging.info("Extracting files from ZIP now...")
-        with ZipFile(self.filename, "r") as zip_file:
+        with ZipFile(zip_path, "r") as zip_file:
             if extract_all:
                 zip_file.extractall(path=self.data_path.parent)
             else:
-                images_internal_path = data_path.stem + '/images'
+                images_internal_path = data_path.stem + "/images"
                 # Extract only the images folder; the rest we will reconstruct via pycolmap
                 for member in zip_file.namelist():
                     if member.startswith(images_internal_path):

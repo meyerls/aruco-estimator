@@ -1,18 +1,17 @@
-import os
 import logging
 from pathlib import Path
 
 from aruco_estimator.localizers import ArucoLocalizer
-from aruco_estimator.visualization import ArucoVisualization
-from aruco_estimator.tools.downloader import Dataset, DOOR_DATASET
 from aruco_estimator.tools.colmap_recon import generate_colmap
+from aruco_estimator.tools.downloader import DOOR_DATASET, Dataset
+from aruco_estimator.visualization import ArucoVisualization
 
 # This patches pycolmap to fix a bug in colmap_wrapper
-import aruco_estimator.patch_colmap
 from colmap_wrapper.colmap import COLMAP
 
 DO_COLMAP_STEP = True
-DOOR_TAG_ID = 7
+CUR_TAG_ID = 7
+
 
 def main():
     dataset = Dataset()
@@ -21,7 +20,7 @@ def main():
         # Download example dataset. Door dataset is roughly 200 MB
         dataset.download_dataset(**DOOR_DATASET, extract_all=False)
         # Build the colmap reconstruction just from the images
-        generate_colmap(image_path=Path(dataset.dataset_path) / 'images')
+        generate_colmap(image_path=Path(dataset.dataset_path) / "images")
     else:
         dataset.download_dataset(**DOOR_DATASET, extract_all=True)
 
@@ -30,7 +29,7 @@ def main():
 
     # Init & run pose estimation of corners in 3D & estimate mean L2 distance between the four aruco corners
     aruco_localizer = ArucoLocalizer(
-        photogrammetry_software=project, aruco_size=dataset.scale, target_id=DOOR_TAG_ID
+        photogrammetry_software=project, aruco_size=dataset.scale, target_id=CUR_TAG_ID
     )
     aruco_distance, aruco_corners_3d = aruco_localizer.run()
     logging.info("Size of the unscaled aruco markers: ", aruco_distance)
