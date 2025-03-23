@@ -91,14 +91,19 @@ def generate_colmap(image_path: str):
             os.replace(src_file, dst_file)
 
     # 4. Prepare for dense reconstruction by undistorting images using the sparse model
+
+    options = pycolmap.UndistortCameraOptions()
     # (we will need to downsample the images to avoid a RAM overload during the
     # patch_match_stereo step below)
+    options.max_image_size = (
+        1024  # Downscale images so that their largest dimension is 1024
+    )
     pycolmap.undistort_images(
-        image_path=image_path,
-        input_path=sparse_output,
         output_path=dense_workspace,
+        input_path=sparse_output,
+        image_path=image_path,
         output_type="COLMAP",
-        max_image_size=1024,
+        undistort_options=options,
     )
 
     if DO_DENSE_RECONSTRUCTION:
