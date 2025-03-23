@@ -1,10 +1,59 @@
+import glob
 import os
 import shutil
-import zipfile
+import subprocess
 from pathlib import Path
+
 import pycolmap
+from PIL import Image  # For image resizing
 
 from .downloader import extract_from_zip
+
+
+def resize_images(image_path, max_size=2048):
+    """
+    Resize all images in the given directory to have a maximum dimension of max_size.
+    Creates a backup of original images first.
+    """
+    # Create backup directory
+    parent_path = Path(image_path).parent
+    backup_path = parent_path / "original_images"
+    os.makedirs(backup_path, exist_ok=True)
+
+    # Get all image files
+    image_files = []
+    for ext in ["*.jpg", "*.jpeg", "*.png", "*.JPG", "*.JPEG", "*.PNG"]:
+        image_files.extend(glob.glob(os.path.join(image_path, ext)))
+
+    for img_file in image_files:
+        # Backup original image
+        filename = os.path.basename(img_file)
+        shutil.copy2(img_file, os.path.join(backup_path, filename))
+
+        # Resize image
+        with Image.open(img_file) as img:
+            width, height = img.size
+
+            # Calculate new dimensions
+            if width > height:
+                if width > max_size:
+                    new_width = max_size
+                    new_height = int(height * (max_size / width))
+            else:
+                if height > max_size:
+                    new_height = max_size
+                    new_width = int(width * (max_size / height))
+                else:
+                    new_width, new_height = width, height
+
+            # Only resize if needed
+            if new_width != width or new_height != height:
+                resized_img = img.resize((new_width, new_height), Image.LANCZOS)
+                resized_img.save(img_file, quality=95)
+                print(
+                    f"Resized {filename} from {width}x{height} to {new_width}x{new_height}"
+                )
+
 
 DO_DENSE_RECONSTRUCTION = True
 
@@ -44,6 +93,8 @@ def generate_colmap(image_path: str):
     os.makedirs(sparse_output, exist_ok=True)
     os.makedirs(dense_workspace, exist_ok=True)
 
+    resize_images(image_path, max_size=2048)
+
     # 1. Extract features and create the COLMAP database
     sift_options = pycolmap.SiftExtractionOptions()
     sift_options.num_threads = 4
@@ -82,7 +133,7 @@ def generate_colmap(image_path: str):
         # mapper_options=mapper_options,
     )
 
-    # (Optional) Move the files from the subfolder (e.g., /sparse/0) to /sparse directly:
+    # Move the files from the subfolder (e.g., /sparse/0) to /sparse directly:
     model_subfolder = os.path.join(sparse_output, "0")
     for file_name in ["cameras.bin", "images.bin", "points3D.bin"]:
         src_file = os.path.join(model_subfolder, file_name)
@@ -92,34 +143,61 @@ def generate_colmap(image_path: str):
 
     # 4. Prepare for dense reconstruction by undistorting images using the sparse model
 
-    options = pycolmap.UndistortCameraOptions()
-    # (we will need to downsample the images to avoid a RAM overload during the
-    # patch_match_stereo step below)
-    options.max_image_size = (
-        1024  # Downscale images so that their largest dimension is 1024
-    )
-    pycolmap.undistort_images(
-        output_path=dense_workspace,
-        input_path=sparse_output,
-        image_path=image_path,
-        output_type="COLMAP",
-        undistort_options=options,
-    )
+    if False:
+        options = pycolmap.UndistortCameraOptions()
+        # (we will need to downsample the images to avoid a RAM overload during the
+        # patch_match_stereo step below)
+        # Downscale images so that their largest dimension is 1024
+        options.max_image_size = 2048
+
+        # Important: These additional parameters ensure consistency
+        options.blank_pixels = True
+        options.min_scale = 0.2  # Allow more scaling
+        options.max_scale = 2.0
+        options.roi_min_x = 0
+        options.roi_min_y = 0
+        options.roi_max_x = 1.0
+        options.roi_max_y = 1.0
+
+        # Add this line to ensure consistency between the image and camera models
+        # options.image_height = options.max_image_size
+        # options.image_width = options.max_image_size
+        pycolmap.undistort_images(
+            output_path=dense_workspace,
+            input_path=sparse_output,
+            image_path=image_path,
+            output_type="COLMAP",
+            undistort_options=options,
+        )
+    else:
+        # Run the image undistorter with max_image_size (e.g., 2048)
+        cmd_undistort = [
+            "colmap",
+            "image_undistorter",
+            "--image_path",
+            str(image_path),
+            "--input_path",
+            str(sparse_output),
+            "--output_path",
+            str(dense_workspace),
+            "--output_type",
+            "COLMAP",
+            "--max_image_size",
+            "2048",
+        ]
+
+        subprocess.run(cmd_undistort, check=True)
 
     if DO_DENSE_RECONSTRUCTION:
-        # WE CANNOT DO THIS PROPERLY SINCE WE NEED TO BUILD WITH CUDA
         # 5. Compute depth maps with patch-match stereo
         # (requires compilation with CUDA)
         # pycolmap doesn't appear to have this command, so we'll use subprocess
         # pycolmap.patch_match_stereo(workspace_path=dense_workspace)
-        import code
-
-        code.interact(banner="tag1", local=locals())
         command = [
             "colmap",
             "patch_match_stereo",
             "--workspace_path",
-            dense_workspace.posix_path(),
+            str(dense_workspace),
         ]
 
         subprocess.run(command, check=True)
