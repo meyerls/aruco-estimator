@@ -70,9 +70,6 @@ class Dataset:
         self.data_path = None
         self.scale = None  # in cm
 
-    def download_door_dataset(self, extract_all: bool):
-        self.download_dataset(**DOOR_DATASET, extract_all=extract_all)
-
     def download_dataset(
         self,
         data_path: str,
@@ -81,6 +78,9 @@ class Dataset:
         file_hash: str,
         scale: float,
         extract_all: bool = True,
+        # We keep these here even though they are unused so **DATASET can be used easily
+        tag_id: int = None,
+        dict_type=None,
     ):
         zip_path = Path(zip_path)
         self.data_path = Path(data_path)
