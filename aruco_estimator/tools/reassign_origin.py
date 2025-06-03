@@ -90,38 +90,36 @@ def get_normalization_transform(aruco_corners_3d: np.ndarray, aruco_size: float)
     
     return transform
 
+
 def normalize_poses_and_points(cameras, images, points3D, transform: np.ndarray):
-    """Apply normalization transform to camera poses and 3D points"""
+    """Apply normalization transform to camera poses and 3D points."""
+    
     # Extract the scale factor from the transformation matrix
-    # Scale factor can be computed from the norm of any column of the rotation part
     scale_factor = np.linalg.norm(transform[:3, 0])
     logging.info(f"Extracted scale factor from transform: {scale_factor:.4f}")
     
+    # Prepare a rotation-only transform (scale removed)
+    normalized_transform = np.eye(4)
+    normalized_transform[:3, :3] = transform[:3, :3] / scale_factor
+    normalized_transform[:3, 3] = transform[:3, 3] / scale_factor
+
+    # Compute the inverse transform for camera poses
+    inverse_normalized_transform = np.linalg.inv(normalized_transform)
+
     # Transform camera poses
     transformed_images = {}
     for image_id, image in images.items():
-        # Get current camera pose as 4x4 matrix
+        # Original pose
         R = qvec2rotmat(image.qvec)
         t = image.tvec
         pose = np.eye(4)
         pose[:3, :3] = R
         pose[:3, 3] = t
 
-        # For camera poses, we need to apply the inverse transformation
-        # First create rotation-only transform (without scaling)
-        rot_only_transform = np.eye(4)
-        rot_only_transform[:3, :3] = transform[:3, :3] / scale_factor
-        rot_only_transform[:3, 3] = transform[:3, 3] / scale_factor
-        
-        # Compute inverse of rotation-only transform
-        rot_transform_inv = np.linalg.inv(rot_only_transform)
-        
-        # Apply rotation transformation
-        rotated_pose = pose @ rot_transform_inv
-        
-        # Now apply scaling to the translation part only
-        rotated_pose[:3, 3] *= scale_factor
-        
+        # Apply inverse of normalization transform
+        rotated_pose = pose @ inverse_normalized_transform
+        rotated_pose[:3, 3] *= scale_factor  # Reapply scale only to translation
+
         # Extract new rotation and translation
         new_R = rotated_pose[:3, :3]
         new_t = rotated_pose[:3, 3]
@@ -136,16 +134,13 @@ def normalize_poses_and_points(cameras, images, points3D, transform: np.ndarray)
             xys=image.xys,
             point3D_ids=image.point3D_ids
         )
-    
-    # Transform 3D points using full homogeneous transformation
+
+    # Transform 3D points
     transformed_points3D = {}
     for point3D_id, point3D in points3D.items():
-        # Convert to homogeneous coordinates
         point_h = np.append(point3D.xyz, 1)
-        # Apply full 4x4 transformation
-        transformed_h = transform @ point_h
-        # Convert back to 3D coordinates (divide by w)
-        new_xyz = transformed_h[:3] / transformed_h[3]
+        transformed_h = normalized_transform @ point_h
+        new_xyz = transformed_h[:3]
         transformed_points3D[point3D_id] = Point3D(
             id=point3D.id,
             xyz=new_xyz,
@@ -154,8 +149,9 @@ def normalize_poses_and_points(cameras, images, points3D, transform: np.ndarray)
             image_ids=point3D.image_ids,
             point2D_idxs=point3D.point2D_idxs
         )
-    
+
     return cameras, transformed_images, transformed_points3D
+
 def save_normalized_data(cameras, images, points3D, output_path: Path) -> None:
     """Save normalized poses and points using COLMAP structure"""
     # Create normalized/sparse directory
