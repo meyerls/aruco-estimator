@@ -33,27 +33,27 @@ def get_normalization_transform(aruco_corners_3d: np.ndarray, aruco_size: float)
     aruco_center = np.mean(aruco_corners_3d, axis=0)
     
     # Calculate vectors defining the ArUco marker orientation
-    y_vec = aruco_corners_3d[0] - aruco_corners_3d[3]
-    y_vec_length = np.linalg.norm(y_vec)
-    y_vec = y_vec / y_vec_length
+    z_vec = aruco_corners_3d[0] - aruco_corners_3d[3]
+    y_vec_length = np.linalg.norm(z_vec)
+    z_vec = z_vec / y_vec_length
     
     x_vec = aruco_corners_3d[0] - aruco_corners_3d[1]
     x_vec_length = np.linalg.norm(x_vec)
     x_vec = x_vec / x_vec_length
     
     # Calculate z-axis ensuring right-handed coordinate system
-    z_vec = np.cross(x_vec, y_vec)
-    z_vec = z_vec / np.linalg.norm(z_vec)
+    y_vec = np.cross(x_vec, z_vec)
+    y_vec = y_vec / np.linalg.norm(y_vec)
     
     # Create source vectors from ArUco orientation
-    source_vectors = np.array([x_vec, y_vec, z_vec])
+    source_vectors = np.array([x_vec, z_vec, y_vec])
     
     # Define target vectors (unit vectors)
     # Patch For Nerfstudio Alignment
-    target_vectors = np.array([
+    target_vectors = -np.array([
         [1, 0, 0],  # Unit x
-        [0, 0, 1],  # Unit y
-        [0, 1, 0]   # Unit z
+        [0, 1, 0],  # Unit y
+        [0, 0, 1]   # Unit z
     ])
     
     # Find rotation to align ArUco vectors with unit vectors
