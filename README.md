@@ -24,6 +24,11 @@ This repository is tested on Python 3.6+ and can be installed from [PyPi](https:
 pip install aruco-estimator
 ````
 
+The pypi project is out of date at the moment. Recommended installation method is 
+```
+pip install git+https://github.com/meyerls/aruco-estimator
+```
+
 ## Usage
 
 ### Dataset
