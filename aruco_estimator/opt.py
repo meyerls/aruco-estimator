@@ -7,15 +7,10 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
-# Built-in/Generic Imports
+import logging
 from typing import Tuple
 
-# Libs
 import numpy as np
-
-
-# Own modules
-# ...
 
 
 def intersect(P0: np.ndarray, N: np.ndarray, solve='pseudo') -> np.ndarray:

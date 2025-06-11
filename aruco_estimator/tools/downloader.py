@@ -6,18 +6,13 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
-# Built-in/Generic Imports
-# ...
-
-# Libs
+import logging
 import os
-import wget
-from zipfile import ZipFile
-from tqdm import tqdm
 import urllib.request
+from zipfile import ZipFile
 
-# Own modules
-# ...
+import wget
+from tqdm import tqdm
 
 EXISTS = True
 NON_EXIST = False
@@ -34,7 +29,7 @@ def download(url: str, output_dir: str, overwrite: bool = False):
     filename = os.path.join(output_dir, url.split('/')[-1])
 
     if os.path.exists(filename) and not overwrite:
-        print('{} already exists in {}'.format(url.split('/')[-1], output_dir))
+        logging.info('{} already exists in {}'.format(url.split('/')[-1], output_dir))
     else:
         with DownloadProgressBar(unit='B',
                                  unit_scale=True,
@@ -52,9 +47,9 @@ def extract(filename: str, output_dir: str):
         # zip_file.printdir()
 
         # extracting all the files
-        print('Extracting all the files now...')
+        logging.info('Extracting all the files now...')
         zip_file.extractall(path=output_dir)
-        print('Done!')
+        logging.info('Done!')
 
 
 class Dataset:
@@ -68,7 +63,7 @@ class Dataset:
 
     def __check_existence(self, output_directory, dataset_name):
         if output_directory == os.path.abspath(__file__):
-            self.data_path = os.path.abspath(os.path.join(output_directory, '..', '..', 'data'))
+            self.data_path = os.path.abspath(os.path.join(output_directory, '..','..', '..', 'data'))
         else:
             self.data_path = os.path.join(output_directory, 'data')
 
@@ -91,7 +86,7 @@ class Dataset:
             self.filename = download(url=self.url, output_dir=self.data_path, overwrite=overwrite)
             extract(filename=self.filename, output_dir=self.data_path)
         else:
-            print('Dataset {} already exists at location {}'.format(self.dataset_name, self.data_path))
+            logging.info('Dataset {} already exists at location {}'.format(self.dataset_name, self.data_path))
 
         self.dataset_path = os.path.abspath(os.path.join(self.data_path, self.url.split('/')[-1].split('.zip')[0]))
         return self.dataset_path
@@ -101,4 +96,4 @@ if __name__ == '__main__':
     downloader = Dataset()
     downloader.download_door_dataset()
 
-    print('Saved at {}'.format(downloader.dataset_path))
+    logging.info('Saved at {}'.format(downloader.dataset_path))

@@ -13,11 +13,9 @@ from typing import Tuple
 # Libs
 import numpy as np
 import open3d as o3d
-from PIL import Image, ImageFont, ImageDraw
+from colmap_wrapper.visualization import generate_line_set
+from PIL import Image, ImageDraw, ImageFont
 from pyquaternion import Quaternion
-
-# Own modules
-from colmap_wrapper.visualization import *
 
 
 def ray_cast_aruco_corners_visualization(p_i: np.ndarray, n_i: np.ndarray, corners3d: np.ndarray) \

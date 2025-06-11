@@ -6,12 +6,22 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
-from aruco_estimator.visualization import *
-from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
+import logging
+
 import numpy as np
+import open3d as o3d
+from colmap_wrapper.visualization import (
+    create_sphere_mesh,
+    draw_camera_viewport,
+    generate_line_set,
+)
+
+from ..localizers import ArucoLocalizer
+from .visualization import ray_cast_aruco_corners_visualization
+
 
 class ScaleFactorExtimatorVisualization():
-    def __init__(self, photogrammetry_software: ArucoScaleFactor):
+    def __init__(self, photogrammetry_software: ArucoLocalizer):
         self.scale_factor_estimator = photogrammetry_software
         self.photogrammetry_software = photogrammetry_software.photogrammetry_software
 
@@ -25,7 +35,7 @@ class ScaleFactorExtimatorVisualization():
 
 
 class ArucoVisualization(ScaleFactorExtimatorVisualization):
-    def __init__(self, aruco_colmap: ArucoScaleFactor, bg_color: np.ndarray = np.asarray([1, 1, 1])):
+    def __init__(self, aruco_colmap: ArucoLocalizer, bg_color: np.ndarray = np.asarray([1, 1, 1])):
         super().__init__(aruco_colmap)
 
         self.vis_bg_color = bg_color
@@ -57,7 +67,7 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
 
             if image_type == 'image':
                 image = self.photogrammetry_software.images[image_idx].getData(
-                    0.3)
+                    self.photogrammetry_software.image_resize)
             elif image_type == 'depth_geo':
                 image = self.photogrammetry_software.images[image_idx].depth_image_geometric
                 min_depth, max_depth = np.percentile(image, [5, 95])
@@ -95,9 +105,9 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
         """
 
         # Add Dense & sparse Model to scene
-        #dense_exists = self.add_colmap_dense2geometrie()
-        #if not dense_exists:
-        self.add_colmap_sparse2geometrie()
+        dense_exists = self.add_colmap_dense2geometrie()
+        if not dense_exists:
+            self.add_colmap_sparse2geometrie()
         # Add camera frustums to scene
         self.add_colmap_frustums2geometrie(frustum_scale=frustum_scale)
 
@@ -143,9 +153,9 @@ class ArucoVisualization(ScaleFactorExtimatorVisualization):
         for geometry in self.geometries:
             viewer.add_geometry(geometry)
         opt = viewer.get_render_option()
-        # opt.show_coordinate_frame = True
+        opt.show_coordinate_frame = True
         opt.point_size = point_size
-        opt.line_width = 5
+        opt.line_width = 0.01
         opt.background_color = self.vis_bg_color
         viewer.run()
         viewer.destroy_window()

@@ -5,20 +5,25 @@ Copyright (c) 2022 Lukas Meyer
 Licensed under the MIT License.
 See LICENSE file for more information.
 """
-import numpy as np
+import logging
 import os
-import open3d as o3d
 from copy import deepcopy
 from typing import Union
 
-# Own modules
+import numpy as np
+import open3d as o3d
 from colmap_wrapper.colmap import COLMAP
-from aruco_estimator.aruco_scale_factor import ArucoScaleFactor
+
+from aruco_estimator.localizers import ArucoLocalizer
+from aruco_estimator.utils import (
+    align_point_set,
+    manual_registration,
+    plot_aligned_pointset,
+)
 from aruco_estimator.visualization import ArucoVisualization
-from aruco_estimator.utils import align_point_set, plot_aligned_pointset, manual_registration
 
 
-class ArucoMarkerScaledRegistration(object):
+class ArucoRegistration(object):
     def __init__(self, project_path_a: str, project_path_b: str, dense_pc: str = 'fused.ply'):
         # Name of both subprojects
         self.project_path_a = project_path_a
@@ -33,9 +38,9 @@ class ArucoMarkerScaledRegistration(object):
         # Load COLMAP projects
         self.load_projects()
 
-        # ArucoScaleFactor class for estimating scale factor
-        self.aruco_scale_factor_a: ArucoScaleFactor = None
-        self.aruco_scale_factor_b: ArucoScaleFactor = None
+        # ArucoLocalizer class for estimating scale factor
+        self.aruco_localizer_a: ArucoLocalizer = None
+        self.aruco_localizer_b: ArucoLocalizer = None
 
         # Sorted array with 3d location of all 4 aruco corners
         self.aruco_corners_3d_a: np.ndarray = None
@@ -58,22 +63,22 @@ class ArucoMarkerScaledRegistration(object):
         self.project_b = COLMAP(self.project_path_b, image_resize=0.3, dense_pc=self.dense_pc)
 
     def scale(self, debug=False):
-        self.aruco_scale_factor_a = ArucoScaleFactor(photogrammetry_software=self.project_a, aruco_size=0.3)
-        self.aruco_scale_factor_b = ArucoScaleFactor(photogrammetry_software=self.project_b, aruco_size=0.3)
+        self.aruco_localizer_a = ArucoLocalizer(photogrammetry_software=self.project_a, aruco_size=0.3)
+        self.aruco_localizer_b = ArucoLocalizer(photogrammetry_software=self.project_b, aruco_size=0.3)
 
-        aruco_distance_a, self.aruco_corners_3d_a = self.aruco_scale_factor_a.run()
-        aruco_distance_b, self.aruco_corners_3d_b = self.aruco_scale_factor_b.run()
+        aruco_distance_a, self.aruco_corners_3d_a = self.aruco_localizer_a.run()
+        aruco_distance_b, self.aruco_corners_3d_b = self.aruco_localizer_b.run()
 
-        self.pcd_a, self.scale_factor_a = self.aruco_scale_factor_a.apply()
-        self.pcd_b, self.scale_factor_b = self.aruco_scale_factor_b.apply()
+        self.pcd_a, self.scale_factor_a = self.aruco_localizer_a.apply()
+        self.pcd_b, self.scale_factor_b = self.aruco_localizer_b.apply()
 
         if debug:
             # Visualization of the scene and rays
-            vis = ArucoVisualization(aruco_colmap=self.aruco_scale_factor_a)
+            vis = ArucoVisualization(aruco_colmap=self.aruco_localizer_a)
             vis.visualization(frustum_scale=0.3, point_size=0.1)
 
             # Visualization of the scene and rays
-            vis = ArucoVisualization(aruco_colmap=self.aruco_scale_factor_b)
+            vis = ArucoVisualization(aruco_colmap=self.aruco_localizer_b)
             vis.visualization(frustum_scale=0.3, point_size=0.1)
 
             o3d.visualization.draw_geometries([self.pcd_a, self.pcd_b])
@@ -126,14 +131,14 @@ class ArucoMarkerScaledRegistration(object):
         o3d.io.write_point_cloud(os.path.join(common_path, './combined.ply'), self.pcd_combined)
         np.savetxt(os.path.join(common_path, 'transformation_b2a.txt'), self.transformation_b2a)
 
-        self.aruco_scale_factor_a.write_data()
-        self.aruco_scale_factor_b.write_data()
+        self.aruco_localizer_a.write_data()
+        self.aruco_localizer_b.write_data()
 
 
 if __name__ == '__main__':
-    scaled_registration = ArucoMarkerScaledRegistration(project_path_a="/home/luigi/Documents/reco/Baum 8/side_1",
-                                                        project_path_b="/home/luigi/Documents/reco/Baum 8/side_2",
-                                                        dense_pc='cropped.ply')
+    scaled_registration = ArucoRegistration(project_path_a="/home/luigi/Documents/reco/Baum 8/side_1",
+                                            project_path_b="/home/luigi/Documents/reco/Baum 8/side_2",
+                                            dense_pc='cropped.ply')
     scaled_registration.scale(debug=False)
     point_set = (np.asarray([-3.074686, -3.703092, 4.512500]), np.asarray([-4.271004, -4.733126, 3.378184])) # Baum 08
     # (np.asarray([-4.037381, -1.749546, 6.646245]), np.asarray([2.538995, -4.001166, 4.676914])) # Baum 07
