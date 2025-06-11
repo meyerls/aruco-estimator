@@ -112,7 +112,7 @@ python3 aruco_estimator/test.py --test_data --visualize --frustum_size 0.4
 ## Limitation / Improvements
 
 - [ ] Up to now only SIMPLE_RADIAL and PINHOLE camera models are supported. Extend all models
-- [ ] Up to now only one aruco marker per scene can be detected. Multiple aruco marker could improve the scale
+- [x] Up to now only one aruco marker per scene can be detected. Multiple aruco marker could improve the scale
   estimation
 - [ ] Different aruco marker settings and marker types should be investigated for different scenarios to make it either more robust to
   false detections
