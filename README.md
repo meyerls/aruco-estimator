@@ -166,12 +166,11 @@ sudo make install
 Please cite this paper, if this work helps you with your research:
 
 ```
-@InProceedings{ ,
-  author="",
-  title="",
-  booktitle="",
-  year="",
-  pages="",
-  isbn=""
+@inproceedings{meyer2023cherrypicker,
+  title={CherryPicker: Semantic skeletonization and topological reconstruction of cherry trees},
+  author={Meyer, Lukas and Gilson, Andreas and Scholz, Oliver and Stamminger, Marc},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={6244--6253},
+  year={2023}
 }
 ```
