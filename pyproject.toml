@@ -1,10 +1,11 @@
 [project]
 name = "aruco-estimator"
-version = "1.1.11"
+version = "1.1.12"
 description = ""
 authors = [
   { name = "Lukas Meyer", email = "lukas.meyer@fau.de" },
   { name = "Nile Walker", email = "nilezwalker@gmail.com" },
+  { name = "Michael Currie", email = "mcurrie@gmail.com" }
 ]
 requires-python = ">=3.9,<4.0"
 readme = "README.md"
