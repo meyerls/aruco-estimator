@@ -12,7 +12,6 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
-from colmap_wrapper.visualization import COLMAP
 from PIL import Image
 
 
@@ -33,6 +32,7 @@ def ray_cast_aruco_corners(
     rays_norm = rays / np.linalg.norm(rays, ord=2, axis=1, keepdims=True)
 
     return camera_origin, rays_norm
+
 
 def detect_aruco_marker(
     image: np.ndarray,

@@ -23,7 +23,12 @@ This repository is tested on Python 3.6+ and can be installed from [PyPi](https:
 pip install aruco-estimator
 ```
 
-However, the above is out of date and broken as of 2025-03-22.  Instead, you should install from source:
+However, the above PyPI release is out of date and broken as of 2025-03-22.  Instead, you should install from source:
+```
+pip install git+https://github.com/meyerls/aruco-estimator
+```
+
+## Usage
 
 
 ### From Source (Conda)
@@ -107,8 +112,10 @@ python3 aruco_estimator/test.py --test_data --visualize --frustum_size 0.4
 ## Limitations / Improvements
 
 - [ ] Up to now only SIMPLE_RADIAL and PINHOLE camera models are supported. Extend all models
-- [ ] Up to now only one aruco marker per scene can be detected. Multiple aruco marker could improve the scale estimation
-- [ ] Different aruco marker settings and marker types should be investigated for different scenarios to make it either more robust to false detections
+- [x] Up to now only one aruco marker per scene can be detected. Multiple aruco marker could improve the scale
+  estimation
+- [ ] Different aruco marker settings and marker types should be investigated for different scenarios to make it either more robust to
+  false detections
 - [ ] Geo referencing of aruco markers with earth coordinate system using GPS or RTK
 - [ ] Only COLMAP is supported. Add additional reconstruction software.
 
@@ -139,12 +146,11 @@ sudo make install
 Please cite this paper, if this work helps you with your research:
 
 ```
-@InProceedings{ ,
-  author="",
-  title="",
-  booktitle="",
-  year="",
-  pages="",
-  isbn=""
+@inproceedings{meyer2023cherrypicker,
+  title={CherryPicker: Semantic skeletonization and topological reconstruction of cherry trees},
+  author={Meyer, Lukas and Gilson, Andreas and Scholz, Oliver and Stamminger, Marc},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={6244--6253},
+  year={2023}
 }
 ```

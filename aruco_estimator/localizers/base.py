@@ -9,7 +9,7 @@ See LICENSE file for more information.
 # Own modules
 import logging
 
-from colmap_wrapper.colmap import COLMAPProject
+from colmap_wrapper.dataloader import COLMAPProject
 
 
 class LocalizerBase(object):
@@ -58,3 +58,4 @@ class LocalizerBase(object):
 
     def write_data(self):
         return NotImplemented
+
