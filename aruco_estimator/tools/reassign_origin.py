@@ -1,24 +1,16 @@
 import logging
 import os
+import json
 from pathlib import Path
 
 import click
 import cv2
 import numpy as np
 import open3d
-from colmap_wrapper.dataloader import COLMAP
 from scipy.spatial.transform import Rotation
 
-from aruco_estimator.sfm.colmap import (
-    Image,
-    Point3D)
-from aruco_estimator.utils import (
-    qvec2rotmat,
-    rotmat2qvec,
-)
-
-from aruco_estimator.sfm.colmap import read_model, write_model
-
+from aruco_estimator.sfm.colmap import COLMAPProject
+from aruco_estimator.utils import qvec2rotmat, rotmat2qvec
 from aruco_estimator.visualization import Model
 from aruco_estimator import ArucoLocalizer
 
@@ -100,78 +92,6 @@ def get_normalization_transform(
     return transform
 
 
-def normalize_poses_and_points(cameras, images, points3D, transform: np.ndarray):
-    """Apply normalization transform to camera poses and 3D points."""
-
-    # Extract the scale factor from the transformation matrix
-    scale_factor = np.linalg.norm(transform[:3, 0])
-    logging.info(f"Extracted scale factor from transform: {scale_factor:.4f}")
-
-    # Prepare a rotation-only transform (scale removed)
-    normalized_transform = np.eye(4)
-    normalized_transform[:3, :3] = transform[:3, :3] / scale_factor
-    normalized_transform[:3, 3] = transform[:3, 3] / scale_factor
-
-    # Compute the inverse transform for camera poses
-    inverse_normalized_transform = np.linalg.inv(normalized_transform)
-
-    # Transform camera poses
-    transformed_images = {}
-    for image_id, image in images.items():
-        # Original pose
-        R = qvec2rotmat(image.qvec)
-        t = image.tvec
-        pose = np.eye(4)
-        pose[:3, :3] = R
-        pose[:3, 3] = t
-
-        # Apply inverse of normalization transform
-        rotated_pose = pose @ inverse_normalized_transform
-        rotated_pose[:3, 3] *= scale_factor  # Reapply scale only to translation
-
-        # Extract new rotation and translation
-        new_R = rotated_pose[:3, :3]
-        new_t = rotated_pose[:3, 3]
-
-        # Create new image with transformed pose
-        transformed_images[image_id] = Image(
-            id=image.id,
-            qvec=rotmat2qvec(new_R),
-            tvec=new_t,
-            camera_id=image.camera_id,
-            name=image.name,
-            xys=image.xys,
-            point3D_ids=image.point3D_ids,
-        )
-
-    # Transform 3D points
-    transformed_points3D = {}
-    for point3D_id, point3D in points3D.items():
-        point_h = np.append(point3D.xyz, 1)
-        transformed_h = normalized_transform @ point_h
-        new_xyz = transformed_h[:3]
-        transformed_points3D[point3D_id] = Point3D(
-            id=point3D.id,
-            xyz=new_xyz,
-            rgb=point3D.rgb,
-            error=point3D.error,
-            image_ids=point3D.image_ids,
-            point2D_idxs=point3D.point2D_idxs,
-        )
-
-    return cameras, transformed_images, transformed_points3D
-
-
-def save_normalized_data(cameras, images, points3D, output_path: Path) -> None:
-    """Save normalized poses and points using COLMAP structure"""
-    # Create normalized/sparse directory
-    output_dir = output_path / "normalized" / "sparse"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Write transformed data
-    write_model(cameras, images, points3D, str(output_dir))
-
-
 def reassign_origin(
     colmap_project: str,
     aruco_size: float = 0.2,
@@ -202,16 +122,20 @@ def reassign_origin(
     if export_tags and export_path is None:
         export_path = os.path.join(project_path, "aruco_tags.json")
 
-    # Load COLMAP data
-    logging.info("Loading COLMAP data...")
-    sparse_dir = os.path.join(project_path, "sparse")
-    cameras, images, points3D = read_model(sparse_dir)
+    # Load COLMAP project using new interface
+    logging.info("Loading COLMAP project...")
+    project = COLMAPProject(str(project_path))
+    
+    # Store original data for visualization if needed
+    if show_original:
+        original_cameras = {k: v for k, v in project.cameras.items()}
+        original_images = {k: v for k, v in project.images.items()}
+        original_points3D = {k: v for k, v in project.points3D.items()}
 
-    # Use COLMAP project only for ArUco detection
+    # Run ArUco detection
     logging.info("Detecting ArUco markers...")
-    project = COLMAP(project_path=str(project_path))
     aruco_localizer = ArucoLocalizer(
-        photogrammetry_software=project,
+        colmap_project=project,
         aruco_size=aruco_size,
         dict_type=dict_type,
         target_id=target_id,
@@ -222,19 +146,18 @@ def reassign_origin(
     logging.info(f"ArUco marker distance: {aruco_distance}")
 
     # Calculate 3D positions for all detected ArUco markers
+    all_aruco_positions = None
     if export_tags:
         logging.info("Calculating positions for all detected ArUco markers...")
         all_aruco_positions = aruco_localizer.get_all_aruco_positions()
         logging.info(f"Found {len(all_aruco_positions)} ArUco markers")
-    project = COLMAP(project_path=str(project_path))
+
     # Calculate normalization transform with scaling
     transform = get_normalization_transform(aruco_corners_3d, aruco_size)
 
-    # Apply normalization to loaded data
+    # Apply normalization to the project
     logging.info("Normalizing poses and 3D points...")
-    cameras_norm, images_norm, points3D_norm = normalize_poses_and_points(
-        cameras, images, points3D, transform
-    )
+    project.transform(transform)
 
     # Verify the scaling worked correctly by measuring the marker in the transformed space
     transformed_corners = np.array(
@@ -260,10 +183,10 @@ def reassign_origin(
 
         # Add point clouds
         if show_original:
-            model.points3D = points3D
+            model.points3D = original_points3D
             model.add_points(color=[0.7, 0.7, 0.7])  # Gray for original points
 
-        model.points3D = points3D_norm
+        model.points3D = project.points3D
         model.add_points()  # Light blue for transformed points
 
         # Add coordinate frames
@@ -284,9 +207,8 @@ def reassign_origin(
         )  # Cyan for transformed marker
 
         # Add all detected ArUco markers
-        if export_tags:  # We only have all markers if export_tags was True
+        if export_tags and all_aruco_positions:
             logging.info("Visualizing all detected ArUco markers...")
-            all_aruco_positions = aruco_localizer.get_all_aruco_positions()
 
             # Define a list of colors for different ArUco markers
             colors = [
@@ -329,26 +251,23 @@ def reassign_origin(
                     transformed_marker_corners, color=colors[color_idx]
                 )
 
-                # Note: We're using different colors to distinguish different ArUco markers
-                # Color mapping is based on the index in the colors list
-
         # Add cameras
         if show_original:
-            model.cameras = cameras
-            model.images = images
+            model.cameras = original_cameras
+            model.images = original_images
             model.add_cameras(
                 scale=0.25, color=[0.7, 0.7, 0.7]
-            )  # Dark yellow for original cameras
+            )  # Gray for original cameras
 
-        model.cameras = cameras_norm
-        model.images = images_norm
-        model.add_cameras(scale=0.25, color=[1, 0, 0])  # Orange for transformed cameras
+        model.cameras = project.cameras
+        model.images = project.images
+        model.add_cameras(scale=0.25, color=[1, 0, 0])  # Red for transformed cameras
 
         # Show visualization
         model.show()
 
     # Export tag positions if requested
-    if export_tags:
+    if export_tags and all_aruco_positions:
         logging.info("Exporting ArUco tag positions...")
         # Transform ArUco corners to new coordinate system
         transformed_aruco_positions = {}
@@ -375,8 +294,6 @@ def reassign_origin(
 
         # Save to JSON file
         with open(export_path, "w") as f:
-            import json
-
             json.dump(
                 {
                     "aruco_tags": transformed_aruco_positions,
@@ -390,6 +307,12 @@ def reassign_origin(
 
     # Save transformed data
     logging.info("Saving normalized data...")
-    save_normalized_data(cameras_norm, images_norm, points3D_norm, project_path)
+    # """Save normalized poses and points using COLMAP structure"""
+    output_dir = project_path / "normalized" / "sparse"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save transformed data using the project's save method
+    project.save(str(output_dir))
 
     logging.info("Done! Normalized data saved to normalized/sparse/")
+

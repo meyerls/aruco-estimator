@@ -34,9 +34,93 @@ import struct
 
 import numpy as np
 from aruco_estimator.sfm.common import CAMERA_MODEL_IDS, CAMERA_MODEL_NAMES, Image, Point3D, Camera, SfmProjectBase
+from colmap_wrapper.dataloader.bin import (
+    write_cameras_text,
+    write_images_text,
+    write_points3D_text,
+)
 
 class COLMAPProject(SfmProjectBase):
-    pass
+    """COLMAP project implementation."""
+    
+    def __init__(self, project_path, sparse_folder="sparse/", images_path=None):
+        self.sparse_folder = sparse_folder
+        self.images_path = images_path or os.path.join(project_path, "images")
+        super().__init__(project_path)
+    
+    def _load_data(self):
+        """Load COLMAP data and convert to standardized format."""
+        sparse_path = os.path.join(self._project_path, self.sparse_folder)
+        
+        if not os.path.exists(sparse_path):
+            raise FileNotFoundError(f"Sparse folder {sparse_path} does not exist")
+        
+        # Load raw COLMAP data
+        cameras, images, points3D = read_model(sparse_path)
+        
+        # Convert to standardized format
+        self._cameras = {
+            cam_id: Camera(*cam) for cam_id, cam in cameras.items()
+        }
+        self._images = {
+            img_id: Image(*img) for img_id, img in images.items()
+        }
+        self._points3D = points3D
+    
+    def save(self, output_path=None, format_ext=".txt"):
+        """Save COLMAP project data."""
+        if output_path is None:
+            output_path = os.path.join(self._project_path, "scaled")
+        
+        os.makedirs(output_path, exist_ok=True)
+        
+        write_model(self._cameras, self._images, self._points3D, output_path, format_ext)
+        
+        # Save scale factor
+        scale_file = os.path.join(output_path, "scale_factor.txt")
+        np.savetxt(scale_file, np.array([self.scale_factor]))
+        
+        print(f"Saved to {output_path}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Read and write COLMAP binary and text models"
+    )
+    parser.add_argument("--input_model", help="path to input model folder")
+    parser.add_argument(
+        "--input_format",
+        choices=[".bin", ".txt"],
+        help="input model format",
+        default="",
+    )
+    parser.add_argument("--output_model", help="path to output model folder")
+    parser.add_argument(
+        "--output_format",
+        choices=[".bin", ".txt"],
+        help="output model format",
+        default=".txt",
+    )
+    args = parser.parse_args()
+
+    cameras, images, points3D = read_model(
+        path=args.input_model, ext=args.input_format
+    )
+
+    print("num_cameras:", len(cameras))
+    print("num_images:", len(images))
+    print("num_points3D:", len(points3D))
+
+    if args.output_model is not None:
+        write_model(
+            cameras,
+            images,
+            points3D,
+            path=args.output_model,
+            ext=args.output_format,
+        )
+
+
 
 def read_next_bytes(fid, num_bytes, format_char_sequence, endian_character="<"):
     """Read and unpack the next bytes from a binary file.
@@ -485,43 +569,26 @@ def write_model(cameras, images, points3D, path, ext=".bin"):
 
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Read and write COLMAP binary and text models"
-    )
-    parser.add_argument("--input_model", help="path to input model folder")
-    parser.add_argument(
-        "--input_format",
-        choices=[".bin", ".txt"],
-        help="input model format",
-        default="",
-    )
-    parser.add_argument("--output_model", help="path to output model folder")
-    parser.add_argument(
-        "--output_format",
-        choices=[".bin", ".txt"],
-        help="output model format",
-        default=".txt",
-    )
-    args = parser.parse_args()
-
-    cameras, images, points3D = read_model(
-        path=args.input_model, ext=args.input_format
-    )
-
-    print("num_cameras:", len(cameras))
-    print("num_images:", len(images))
-    print("num_points3D:", len(points3D))
-
-    if args.output_model is not None:
-        write_model(
-            cameras,
-            images,
-            points3D,
-            path=args.output_model,
-            ext=args.output_format,
-        )
-
-
+# Example usage
 if __name__ == "__main__":
-    main()
+    # Create a COLMAP project - converts data to standardized format
+    project = COLMAPProject("door")
+    
+    # Apply transformations (works with any SfM software)
+    project.transform_scale(0.1)  
+    
+    # Save the processed reconstruction
+    project.save("output", format_ext=".txt")
+    
+    # # Access standardized functionality - works the same for all SfM software
+    # for img_id, img in project.images.items():
+    #     extrinsics = img.extrinsics  # 4x4 matrix
+    #     camera_center = img.get_camera_center()  # 3D point
+    
+    # for cam_id, cam in project.cameras.items():
+    #     K = cam.K  # 3x3 intrinsics matrix
+    #     intrinsics_obj = cam.intrinsics  # Object with .K property
+    
+    # Future: OpenMVGProject would produce the exact same standardized format
+    # project = OpenMVGProject("/path/to/openmvg/project")
+    # # Same API works identically!
