@@ -1,5 +1,10 @@
 import numpy as np
-from aruco_estimator.opt import ls_intersection_of_lines, ls_intersection_of_lines_parallelized
+
+from aruco_estimator.opt import (
+    ls_intersection_of_lines,
+    ls_intersection_of_lines_parallelized,
+)
+
 P0 = np.array([[-0.66467896, -0.12612974, 0.18842651],
                 [2.0592406, -0.07465627, -1.96427852],
                 [-3.16910332, -0.15764522, 0.7080943],

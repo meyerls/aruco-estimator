@@ -33,7 +33,15 @@ import os
 import struct
 
 import numpy as np
-from aruco_estimator.sfm.common import CAMERA_MODEL_IDS, CAMERA_MODEL_NAMES, Image, Point3D, Camera, SfmProjectBase
+
+from aruco_estimator.sfm.common import (
+    CAMERA_MODEL_IDS,
+    CAMERA_MODEL_NAMES,
+    Camera,
+    Image,
+    Point3D,
+    SfmProjectBase,
+)
 
 
 class COLMAPProject(SfmProjectBase):
@@ -73,8 +81,8 @@ class COLMAPProject(SfmProjectBase):
         write_model(self._cameras, self._images, self._points3D, output_path, format_ext)
         
         # Save scale factor
-        scale_file = os.path.join(output_path, "scale_factor.txt")
-        np.savetxt(scale_file, np.array([self.scale_factor]))
+        # scale_file = os.path.join(output_path, "scale_factor.txt")
+        # np.savetxt(scale_file, np.array([self.scale_factor]))
         
         print(f"Saved to {output_path}")
 

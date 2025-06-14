@@ -2,13 +2,11 @@ import argparse
 import collections
 import os
 import struct
-import numpy as np
-from abc import ABC, abstractmethod
-from ..utils import qvec2rotmat, rotmat2qvec 
-
-import numpy as np
 from abc import ABC, abstractmethod
 
+import numpy as np
+
+from ..utils import qvec2rotmat, rotmat2qvec
 
 # Standardized data structures - all SfM software must produce these
 CameraModel = collections.namedtuple(
@@ -115,13 +113,13 @@ class SfmProjectBase(ABC):
     All SfM software implementations (COLMAP, OpenMVG, etc.) must inherit from this
     and convert their data to the standardized Camera, Image, Point3D format.
     """
-    
+    def detect_markers(self,dict, detector):
+        pass
     def __init__(self, project_path):
         self._project_path = project_path
         self._cameras = {}
         self._images = {}
         self._points3D = {}
-        self.scale_factor = 1.0
         self._load_data()
         self._verify_data_loaded()
     
@@ -148,14 +146,9 @@ class SfmProjectBase(ABC):
         
         # Transform camera poses
         for img_id, img in self._images.items():
-            # Get current camera-to-world pose
-            R = qvec2rotmat(img.qvec)
-            current_c2w = np.eye(4)
-            current_c2w[:3, :3] = R.T        # Camera-to-world rotation
-            current_c2w[:3, 3] = -R.T @ img.tvec  # Camera center
-            
+          
             # Apply transformation: new_c2w = transform * old_c2w
-            new_c2w = transform_matrix @ current_c2w
+            new_c2w = transform_matrix @ img.world_extrinsics
             
             # Convert back to world-to-camera for qvec/tvec storage
             new_w2c = np.linalg.inv(new_c2w)
@@ -173,17 +166,8 @@ class SfmProjectBase(ABC):
             new_xyz = transformed_h[:3]
             self._points3D[pt_id] = pt._replace(xyz=new_xyz)
         
-        # Update scale factor (simple norm of first column)
-        scale = np.linalg.norm(transform_matrix[:3, 0])
-        self.scale_factor *= scale
 
-    def get_camera_matrix_for_image(self, img):
-        """Helper to get camera-to-world matrix for a specific image."""
-        R = qvec2rotmat(img.qvec)
-        T = np.eye(4)
-        T[:3, :3] = R.T
-        T[:3, 3] = -R.T @ img.tvec
-        return T
+   
     @property
     def cameras(self):
         return self._cameras

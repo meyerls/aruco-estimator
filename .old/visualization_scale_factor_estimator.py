@@ -18,7 +18,6 @@ from colmap_wrapper.visualization import (
 
 from . import ArucoLocalizer
 
-
 """
 Copyright (c) 2022 Lukas Meyer
 Licensed under the MIT License.

@@ -1,6 +1,6 @@
+import json
 import logging
 import os
-import json
 from pathlib import Path
 
 import click
@@ -9,9 +9,9 @@ import numpy as np
 import open3d
 from scipy.spatial.transform import Rotation
 
+from aruco_estimator import ArucoLocalizer
 from aruco_estimator.utils import qvec2rotmat, rotmat2qvec
 from aruco_estimator.visualization import Model
-from aruco_estimator import ArucoLocalizer
 
 
 def get_normalization_transform(
@@ -68,6 +68,7 @@ def get_normalization_transform(
     logging.info(
         f"ArUco measured width: {measured_width:.4f}, height: {measured_height:.4f}"
     )
+    
     logging.info(
         f"Scaling factor: {scale_factor:.4f} to match target size {aruco_size}"
     )

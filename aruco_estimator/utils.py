@@ -6,10 +6,6 @@ See LICENSE file for more information.
 
 import logging
 from copy import copy
-
-import numpy as np
-import open3d as o3d
-import logging
 from typing import Tuple, Union
 
 import cv2
@@ -17,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 from PIL import Image
+
 
 def qvec2rotmat(qvec):
     return np.array(

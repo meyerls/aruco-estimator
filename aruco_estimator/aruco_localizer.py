@@ -17,16 +17,17 @@ from typing import Tuple, Union
 import cv2
 import numpy as np
 import open3d as o3d
-
 from tqdm import tqdm
-from .sfm.colmap import COLMAPProject
-from .utils import detect_aruco_marker, ray_cast_aruco_corners
+
 from .opt import (
     intersect,
     intersect_parallelized,
     ls_intersection_of_lines,
     ls_intersection_of_lines_parallelized,
 )
+from .sfm.colmap import COLMAPProject
+from .utils import detect_aruco_marker, ray_cast_aruco_corners
+
 
 def timeit(func):
     @wraps(func)
@@ -95,9 +96,6 @@ class ArucoLocalizer():
         # Store all detected ArUco markers
         self.all_aruco_ids = []
         self.all_aruco_corners_3d = {}  # Dictionary mapping ArUco IDs to their 3D corner positions
-
-        # Results
-        self.scale_factor = None
 
         # Multi Processing
         self.progress_bar = True

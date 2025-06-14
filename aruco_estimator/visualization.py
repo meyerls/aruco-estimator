@@ -32,8 +32,8 @@ import argparse
 import numpy as np
 import open3d
 
-from aruco_estimator.utils import qvec2rotmat
 from aruco_estimator.sfm import read_model
+from aruco_estimator.utils import qvec2rotmat
 
 
 class Model:
