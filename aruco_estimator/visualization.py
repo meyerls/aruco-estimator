@@ -1,145 +1,127 @@
-# Copyright (c) 2023, ETH Zurich and UNC Chapel Hill.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-#     * Redistributions of source code must retain the above copyright
-#       notice, this list of conditions and the following disclaimer.
-#
-#     * Redistributions in binary form must reproduce the above copyright
-#       notice, this list of conditions and the following disclaimer in the
-#       documentation and/or other materials provided with the distribution.
-#
-#     * Neither the name of ETH Zurich and UNC Chapel Hill nor the names of
-#       its contributors may be used to endorse or promote products derived
-#       from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
+from typing import Dict, List, Optional
 
-import argparse
-
+import cv2
 import numpy as np
-import open3d
+import open3d as o3d
 
-from aruco_estimator.sfm import read_model
-from aruco_estimator.utils import qvec2rotmat
+from aruco_estimator.sfm.common import SfmProjectBase
 
 
-class Model:
+class VisualizationModel:
+    """3D visualization model that can display multiple projects/data sources."""
+    
     def __init__(self):
-        self.cameras = []
-        self.images = []
-        self.points3D = []
+        """Initialize empty visualization model."""
         self.__vis = None
 
-    def read_model(self, path, ext=""):
-        self.cameras, self.images, self.points3D = read_model(path, ext)
+    def create_window(self):
+        """Create the visualization window."""
+        self.__vis = o3d.visualization.Visualizer()
+        self.__vis.create_window()
 
-    def add_points(self, min_track_len=3, remove_statistical_outlier=True, color=None):
-        """Add 3D points to visualization.
+    def add_project(self, project: SfmProjectBase, 
+                   points_config: Optional[Dict] = None,
+                   cameras_config: Optional[Dict] = None,
+                   enable_points: bool = True,
+                   enable_cameras: bool = True):
+        """
+        Add a project to the visualization with specific configuration.
         
         Args:
-            min_track_len: Minimum track length for points
-            remove_statistical_outlier: Whether to remove outliers
-            color: Optional RGB color for points. If None, uses point colors from model.
+            project: SfM project instance
+            points_config: Configuration for point cloud visualization
+            cameras_config: Configuration for camera visualization  
+            enable_points: Whether to add points from this project
+            enable_cameras: Whether to add cameras from this project
         """
-        pcd = open3d.geometry.PointCloud()
+        if enable_points and project.points3D:
+            self._add_project_points(project, points_config or {})
+        
+        if enable_cameras and project.cameras and project.images:
+            self._add_project_cameras(project, cameras_config or {})
+
+    def _add_project_points(self, project: SfmProjectBase, config: Dict):
+        """Add 3D points from a project with given configuration."""
+        # Default configuration
+        default_config = {
+            "min_track_len": 3,
+            "remove_statistical_outlier": True,
+            "color": None
+        }
+        default_config.update(config)
+        
+        pcd = o3d.geometry.PointCloud()
 
         xyz = []
         rgb = []
-        for point3D in self.points3D.values():
+        for point3D in project.points3D.values():
             track_len = len(point3D.point2D_idxs)
-            if track_len < min_track_len:
+            if track_len < default_config["min_track_len"]:
                 continue
             xyz.append(point3D.xyz)
-            if color is None:
+            if default_config["color"] is None:
                 rgb.append(point3D.rgb / 255)
 
-        pcd.points = open3d.utility.Vector3dVector(xyz)
-        if color is not None:
-            pcd.paint_uniform_color(color)
+        pcd.points = o3d.utility.Vector3dVector(xyz)
+        if default_config["color"] is not None:
+            pcd.paint_uniform_color(default_config["color"])
         else:
-            pcd.colors = open3d.utility.Vector3dVector(rgb)
+            pcd.colors = o3d.utility.Vector3dVector(rgb)
 
-        # remove obvious outliers
-        if remove_statistical_outlier:
+        # Remove obvious outliers
+        if default_config["remove_statistical_outlier"]:
             [pcd, _] = pcd.remove_statistical_outlier(
                 nb_neighbors=20, std_ratio=2.0
             )
 
-        # open3d.visualization.draw_geometries([pcd])
         self.__vis.add_geometry(pcd)
         self.__vis.poll_events()
         self.__vis.update_renderer()
 
-    def add_cameras(self, scale=1, color=[0.8, 0.2, 0.8]):
-        """Add camera visualizations.
+    def _add_project_cameras(self, project: SfmProjectBase, config: Dict):
+        """Add cameras from a project with given configuration."""
+        # Default configuration
+        default_config = {
+            "scale": 1.0,
+            "color": [0.8, 0.2, 0.8],
+            "show_images": True,
+            "image_alpha": 0.8
+        }
+        default_config.update(config)
         
-        Args:
-            scale: Scale factor for camera models
-            color: RGB color for camera planes and lines
-        """
-        frames = []
-        for img in self.images.values():
-            # rotation
-            R = qvec2rotmat(img.qvec)
+        for img in project.images.values():
+            # Get camera parameters
+            cam = project.cameras[img.camera_id]
+            
+            # Get extrinsics matrix (camera-to-world)
+            extrinsics = img.world_extrinsics
+            
+            # Get intrinsics matrix
+            K = cam.K
+            
+            # Load the actual image if requested
+            image = None
+            if default_config["show_images"]:
+                image = project.load_image_by_id(img.id)
+                if image is not None:
+                    # Convert BGR to RGB for Open3D
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-            # translation
-            t = img.tvec
-
-            # invert
-            t = -R.T @ t
-            R = R.T
-
-            # intrinsics
-            cam = self.cameras[img.camera_id]
-
-            if cam.model in ("SIMPLE_PINHOLE", "SIMPLE_RADIAL", "RADIAL"):
-                fx = fy = cam.params[0]
-                cx = cam.params[1]
-                cy = cam.params[2]
-            elif cam.model in (
-                "PINHOLE",
-                "OPENCV",
-                "OPENCV_FISHEYE",
-                "FULL_OPENCV",
-            ):
-                fx = cam.params[0]
-                fy = cam.params[1]
-                cx = cam.params[2]
-                cy = cam.params[3]
-            else:
-                raise Exception("Camera model not supported")
-
-            # intrinsics
-            K = np.identity(3)
-            K[0, 0] = fx
-            K[1, 1] = fy
-            K[0, 2] = cx
-            K[1, 2] = cy
-
-            # create axis, plane and pyramed geometries that will be drawn
-            cam_model = draw_camera(K, R, t, cam.width, cam.height, scale, color)
-            frames.extend(cam_model)
-
-        # add geometries to visualizer
-        for i in frames:
-            self.__vis.add_geometry(i)
-
-    def create_window(self):
-        self.__vis = open3d.visualization.Visualizer()
-        self.__vis.create_window()
+            # Create camera viewport with image texture
+            line_set, spheres, mesh = draw_camera_viewport(
+                extrinsics=extrinsics,
+                intrinsics=K,
+                image=image,
+                scale=default_config["scale"]
+            )
+            
+            # Add all geometries
+            if mesh is not None and len(mesh.vertices) > 0:
+                self.__vis.add_geometry(mesh)
+            self.__vis.add_geometry(line_set)
+            # spheres is a list from create_sphere_mesh
+            for sphere in spheres:
+                self.__vis.add_geometry(sphere)
 
     def add_coordinate_frame(self, size=1.0, transform=None):
         """Add coordinate frame visualization.
@@ -148,7 +130,7 @@ class Model:
             size: Size of the coordinate frame
             transform: Optional 4x4 transformation matrix to apply
         """
-        frame = open3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
+        frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
         if transform is not None:
             frame.transform(transform)
         self.__vis.add_geometry(frame)
@@ -162,10 +144,10 @@ class Model:
             corner_size: Size of corner spheres
         """
         # Create ArUco marker visualization
-        aruco_lines = open3d.geometry.LineSet()
-        aruco_lines.points = open3d.utility.Vector3dVector(corners)
-        aruco_lines.lines = open3d.utility.Vector2iVector([[0,1], [1,2], [2,3], [3,0]])
-        aruco_lines.colors = open3d.utility.Vector3dVector([color for _ in range(4)])
+        aruco_lines = o3d.geometry.LineSet()
+        aruco_lines.points = o3d.utility.Vector3dVector(corners)
+        aruco_lines.lines = o3d.utility.Vector2iVector([[0,1], [1,2], [2,3], [3,0]])
+        aruco_lines.colors = o3d.utility.Vector3dVector([color for _ in range(4)])
         
         # Add lines
         self.__vis.add_geometry(aruco_lines)
@@ -173,117 +155,159 @@ class Model:
         # Add corner spheres instead of points for better visibility
         corner_color = [1, 1, 0]  # Yellow corners
         for corner in corners:
-            sphere = open3d.geometry.TriangleMesh.create_sphere(radius=corner_size)
+            sphere = o3d.geometry.TriangleMesh.create_sphere(radius=corner_size)
             sphere.translate(corner)
             sphere.paint_uniform_color(corner_color)
             self.__vis.add_geometry(sphere)
 
+    def add_aruco_markers(self, markers_dict: Dict[int, np.ndarray], 
+                         colors: Optional[List[List[float]]] = None,
+                         corner_size: float = 0.10):
+        """Add multiple ArUco markers with different colors.
+        
+        Args:
+            markers_dict: Dictionary of {marker_id: corners} 
+            colors: List of RGB colors, cycles if fewer colors than markers
+            corner_size: Size of corner spheres
+        """
+        if colors is None:
+            colors = [
+                [1, 0, 0],  # Red
+                [0, 1, 0],  # Green  
+                [0, 0, 1],  # Blue
+                [1, 1, 0],  # Yellow
+                [1, 0, 1],  # Magenta
+                [0, 1, 1],  # Cyan
+                [0.5, 0.5, 0],  # Olive
+                [0.5, 0, 0.5],  # Purple
+                [0, 0.5, 0.5],  # Teal
+                [0.7, 0.3, 0.3],  # Brown
+            ]
+        
+        for i, (marker_id, corners) in enumerate(markers_dict.items()):
+            color = colors[i % len(colors)]
+            self.add_aruco_marker(corners, color=color, corner_size=corner_size)
+
     def show(self):
+        """Display the visualization."""
         self.__vis.poll_events()
         self.__vis.update_renderer()
         self.__vis.run()
         self.__vis.destroy_window()
 
 
-def draw_camera(K, R, t, w, h, scale=1, color=[0.8, 0.2, 0.8]):
-    """Create axis, plane and pyramed geometries in Open3D format.
-    :param K: calibration matrix (camera intrinsics)
-    :param R: rotation matrix
-    :param t: translation
-    :param w: image width
-    :param h: image height
-    :param scale: camera model scale
-    :param color: color of the image plane and pyramid lines
-    :return: camera model geometries (axis, plane and pyramid)
+def draw_camera_viewport(extrinsics, intrinsics, image=None, scale=1.0, 
+                        image_width=None, image_height=None, color=[0.8, 0.2, 0.8]):
     """
-
-    # intrinsics
-    K = K.copy() / scale
-    Kinv = np.linalg.inv(K)
-
-    # 4x4 transformation
-    T = np.column_stack((R, t))
-    T = np.vstack((T, (0, 0, 0, 1)))
-
-    # axis
-    axis = open3d.geometry.TriangleMesh.create_coordinate_frame(
-        size=0.5 * scale
+    Create camera viewport visualization exactly like colmap_wrapper.visualization.draw_camera_viewport
+    
+    Args:
+        extrinsics: 4x4 camera-to-world transformation matrix
+        intrinsics: 3x3 camera intrinsics matrix K
+        image: Camera image (BGR format)
+        scale: Scale factor for camera visualization
+        image_width: Image width in pixels
+        image_height: Image height in pixels
+        color: Fallback color if no image provided
+    
+    Returns:
+        tuple: (line_set, spheres, mesh) representing camera frustum, points, and image plane
+    """
+    
+    # Extrinsic parameters - extract R and t from 4x4 matrix
+    R, t = extrinsics[:3, :3], extrinsics[:3, 3]
+    
+    # Intrinsic parameters
+    fx, fy, cx, cy = (
+        intrinsics[0, 0],
+        intrinsics[1, 1], 
+        intrinsics[0, 2],
+        intrinsics[1, 2],
     )
-    axis.transform(T)
-
-    # points in pixel
-    points_pixel = [
-        [0, 0, 0],
-        [0, 0, 1],
-        [w, 0, 1],
-        [0, h, 1],
-        [w, h, 1],
+    
+    # Normalize to 1 (this is the key difference from my previous implementation)
+    max_norm = max(fx, fy, cx, cy)
+    
+    # Define frustum points exactly as in the working version
+    points = [
+        t,
+        t + (np.asarray([cx, cy, fx]) * scale) / max_norm @ R.T,
+        t + (np.asarray([cx, -cy, fx]) * scale) / max_norm @ R.T,
+        t + (np.asarray([-cx, -cy, fx]) * scale) / max_norm @ R.T,
+        t + (np.asarray([-cx, cy, fx]) * scale) / max_norm @ R.T,
     ]
+    
+    # Define frustum lines
+    lines = [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [2, 3], [3, 4], [4, 1]]
+    line_set = generate_line_set(points=points, lines=lines, color=[1, 0, 0])
+    
+    # Create sphere at camera center
+    sphere = create_sphere_mesh(t=t, color=[1, 0, 0], radius=0.01)
+    
+    # Fill image plane/mesh with image as texture
+    if isinstance(image, np.ndarray):
+        # Create Point Cloud and assign a normal vector pointing in the opposite direction of the viewing normal
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(np.asarray(points[1:]))
+        normal_vec = -(np.asarray([0, 0, fx]) @ R.T)
+        pcd.normals = o3d.utility.Vector3dVector(
+            np.tile(normal_vec, (pcd.points.__len__(), 1))
+        )
+        
+        # Create image plane with image as texture
+        plane = o3d.geometry.TriangleMesh()
+        plane.vertices = pcd.points
+        plane.triangles = o3d.utility.Vector3iVector(np.asarray([[0, 1, 3], [1, 2, 3]]))
+        plane.compute_vertex_normals()
+        v_uv = np.asarray([[1, 1], [1, 0], [0, 1], [1, 0], [0, 0], [0, 1]])
+        plane.triangle_uvs = o3d.utility.Vector2dVector(v_uv)
+        plane.triangle_material_ids = o3d.utility.IntVector([0] * 2)
+        plane.textures = [o3d.geometry.Image(image)]
+    else:
+        plane = o3d.geometry.TriangleMesh()
+    
+    return line_set, sphere, plane
 
-    # pixel to camera coordinate system
-    points = [Kinv @ p for p in points_pixel]
 
-    # image plane
-    width = abs(points[1][0]) + abs(points[3][0])
-    height = abs(points[1][1]) + abs(points[3][1])
-    plane = open3d.geometry.TriangleMesh.create_box(width, height, depth=1e-6)
-    plane.paint_uniform_color(color)
-    plane.translate([points[1][0], points[1][1], scale])
-    plane.transform(T)
+def generate_line_set(points: list, lines: list, color: list) -> o3d.geometry.LineSet:
+    """
+    Generates a line set of parsed points, with uniform color.
 
-    # pyramid
-    points_in_world = [(R @ p + t) for p in points]
-    lines = [
-        [0, 1],
-        [0, 2],
-        [0, 3],
-        [0, 4],
-    ]
+    :param points: points of lines
+    :param lines: list of connections
+    :param color: rgb color ranging between 0 and 1.
+    :return:
+    """
     colors = [color for i in range(len(lines))]
-    line_set = open3d.geometry.LineSet(
-        points=open3d.utility.Vector3dVector(points_in_world),
-        lines=open3d.utility.Vector2iVector(lines),
+    line_set = o3d.geometry.LineSet(
+        points=o3d.utility.Vector3dVector(points),
+        lines=o3d.utility.Vector2iVector(lines),
     )
-    line_set.colors = open3d.utility.Vector3dVector(colors)
-
-    # return as list in Open3D format
-    return [axis, plane, line_set]
+    line_set.colors = o3d.utility.Vector3dVector(colors)
+    return line_set
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Visualize COLMAP binary and text models"
-    )
-    parser.add_argument(
-        "--input_model", required=True, help="path to input model folder"
-    )
-    parser.add_argument(
-        "--input_format",
-        choices=[".bin", ".txt"],
-        help="input model format",
-        default="",
-    )
-    args = parser.parse_args()
-    return args
+def create_sphere_mesh(t: np.ndarray, color: list, radius: float) -> list:
+    """
+    Creates a sphere mesh, is translated to a parsed 3D coordinate and has uniform color
 
+    @param t: 3D Coordinate. Either 1 coordinate ore multiple
+    @param color: rgb color ranging between 0 and 1.
+    @param radius: radius of the sphere
+    :return:
+    """
+    # Only one point
+    if t.shape.__len__() == 1:
+        t = np.expand_dims(t, axis=0)
+        color = [color]
 
-def main():
-    args = parse_args()
+    sphere_list = []
 
-    # read COLMAP model
-    model = Model()
-    model.read_model(args.input_model, ext=args.input_format)
+    for p, c in zip(t, color):
+        sphere = o3d.geometry.TriangleMesh.create_sphere(radius=radius)
+        sphere.translate(p)
+        sphere.paint_uniform_color(np.asarray(c))
+        sphere.compute_triangle_normals()
+        sphere_list.append(sphere)
 
-    print("num_cameras:", len(model.cameras))
-    print("num_images:", len(model.images))
-    print("num_points3D:", len(model.points3D))
-
-    # display using Open3D visualization tools
-    model.create_window()
-    model.add_points()
-    model.add_cameras(scale=0.25)
-    model.show()
-
-
-if __name__ == "__main__":
-    main()
+    return sphere_list

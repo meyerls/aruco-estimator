@@ -4,6 +4,7 @@ data/
 __pycache__/
 *.zip
 door/
+dumpy/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/git s

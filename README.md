@@ -2,7 +2,7 @@
     <img width="100%" src="assets/wood.png">
 </p>
 
-# Automatic Estimation of the Scale Factor Based on Aruco Markers
+# Automatic Scale Factor Estimation Based on ArUco Markers
 
 <a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/aruco-estimator"></a>
 <a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aruco-estimator"></a>
@@ -11,18 +11,19 @@
 
 ## About
 
-This project aims to automatically compute the correct scale and registration of projects generated with [COLMAP](https://colmap.github.io/) by placing one or many aruco markers into the scene.
+This project automatically computes the correct scale and registration of 3D reconstructions generated with [COLMAP](https://colmap.github.io/) by placing one or more ArUco markers in the scene.
 
 ## Installation
 
-This repository is tested on Python 3.6+ and can be installed from [PyPi](https://pypi.org/project/aruco-estimator)
+This repository is tested on Python 3.6+ and can be installed from PyPI:
 
 ```bash
 pip install aruco-estimator
 ```
 
-However, the above PyPI release is out of date and broken as of 2025-03-22. Expect breaking changes, instead you should install from source:
-```
+**Note:** The PyPI release is currently out of date and broken as of 2025-03-22. For the latest stable version, install directly from source:
+
+```bash
 pip install git+https://github.com/meyerls/aruco-estimator
 ```
 
@@ -30,112 +31,61 @@ pip install git+https://github.com/meyerls/aruco-estimator
 
 ### Test Data
 
-```
+Download and extract the test dataset:
+
+```bash
 wget -O door.zip "https://faubox.rrze.uni-erlangen.de/dl/fiUNWMmsaEAavXHfjqxfyXU9/door.zip"
 unzip door.zip
 ```
 
-```
-aruco-estimator reassign-origin ./door --target-id 7 --visualize
-```
+### Registration
 
-<!-- ### From Source (Conda)
-
-First, check that you have an NVIDIA GPU, because a GPU is required with CUDA for `colmap patch_match_stereo --workspace_path data\door\dense`. -->
-<!-- 
-```bash
-# Check the max version your computer is CAPABLE of running: 
-nvidia-smi
-# Check the CUDA version you have installed:
-nvcc --version
-```
-
-This version must be something higher than 11 I think, for the COLMAP with CUDA bindings below to work.  If you can upgrade, then do so first.  If you cannot, then you won't be able to do dense reconstructions and therefore you won't be able to use this library.
-
-Next, install COLMAP with CUDA bindings.  Here are the commands for Windows Powershell:
-
-```powershell
-rd /s /q C:\colmap
-
-curl -L -o C:\colmap.zip https://github.com/colmap/colmap/releases/download/3.11.1/colmap-x64-windows-cuda.zip
-
-:: Extract the ZIP file to C:\colmapcommand
-powershell -Command "Expand-Archive -Path C:\colmap.zip -DestinationPath C:\colmap"
-
-:: Update the PATH for the current session
-set PATH=C:\colmap\bin;%PATH%
-```
-
-Finally, install the aruco-estimator repo and run the example script:
+Test the registration functionality with the example project:
 
 ```bash
-git clone https://github.com/MichaelCurrie/aruco-estimator.git
-cd aruco-estimator
-conda create -n arenv python=3.9 -y
-conda activate arenv
-conda install -c conda-forge exiftool -y
-pip install .
-python example.py
-``` -->
-
-
-<!-- ### Scale Factor Estimation Example
-
-A runnable example with a dataset taken from a door is available by running:
-
-```bash
-python example.py
-``` -->
-<!-- 
-### Registration and Scaling
-
-In some cases COLMAP is not able to "registrate" all images into one dense reconstruction. If appears to be reconstructed into two seperated reconstruction. To registrate both (for now, only two are possible) reconstructions the ArUco markers are used to registrate both sides using ```ArucoRegistration```.
-
-```python
-from aruco_estimator.registration import ArucoRegistration
-
-scaled_registration = ArucoRegistration(
-    project_path_a=[path2part1],
-    project_path_b=[path2part2]
-)
-scaled_registration.scale(debug=True)
-scaled_registration.registrate(manual=False, debug=True)
-scaled_registration.write()
+aruco-estimator register ./door --target-id 7 --show
 ```
 
-To test the code on your local machine try the example project by using:
-
-````angular2html
-python3 aruco_estimator/test.py --test_data --visualize --frustum_size 0.4
-````
 <p align="center" width="100%">
-    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/main/assets/door.png?raw=true">
+    <img width="100%" src="assets/door.png?raw=true">
 </p>
 
 <p align="center" width="100%">
-    <img width="100%" src="https://github.com/meyerls/aruco-estimator/blob/main/assets/output.gif?raw=true">
-</p> -->
+    <img width="100%" src="assets/output.gif?raw=true">
+</p>
 
-## Limitations / Improvements
+## Known Limitations
 
-- [ ] Up to now only SIMPLE_RADIAL and PINHOLE camera models are supported. Extend all models
+- Dense cloud visualization and modification is currently broken
+- Only SIMPLE_RADIAL and PINHOLE camera models are supported
+- Aruco boards are not uniquely supported 
+- Pose estimation is not robust to false detections; filtering would be beneficial
+- Only COLMAP .bin and .txt models are supported
 
-- [ ] Different aruco marker settings and marker types should be investigated for different scenarios to make it either more robust to
-  false detections
-- [ ] Geo referencing of aruco markers with earth coordinate system using GPS or RTK
-- [ ] Only COLMAP is supported. Add additional reconstruction software.
-
-## Acknowledgements
-
-* The code to read out the binary COLMAP data is partly borrowed from the repo [COLMAP Utility Scripts](https://github.com/uzh-rpg/colmap_utils) by [uzh-rpg](https://github.com/uzh-rpg).
-* Thanks to [Baptiste](https://github.com/Baptiste-AIST) for providing the data for the wooden block reconstruction. Source from [[1](https://robocip-aist.github.io/sii_nerf_scans/)]
+## Roadmap
+- [ ] Replace get_normalization_transform with kabsch_umeyama
+- [ ] Geo-referencing of ArUco markers with Earth coordinate system using GPS or RTK
+- [ ] Support for additional camera models
+- [ ] Improved pose estimation robustness
+- [ ] Dense cloud visualization fixes
 
 ## Troubleshooting
 
-* In some cases cv2 does not detect the aruco marker module. Reinstalling opencv-python and opencv-python-python might help [Source](https://stackoverflow.com/questions/45972357/python-opencv-aruco-no-module-named-cv2-aruco)
-* [PyExifTool](https://github.com/sylikc/pyexiftool): A library to communicate with the [ExifTool](https://exiftool.org) application. If you have trouble installing it please refer to the PyExifTool-Homepage. 
+### OpenCV ArUco Module Issues
+
+If cv2 doesn't detect the ArUco marker module, try reinstalling OpenCV:
+
 ```bash
-# For Ubuntu users:
+pip uninstall opencv-python opencv-python-headless
+pip install opencv-python opencv-contrib-python
+```
+
+### ExifTool Installation
+
+This project uses [PyExifTool](https://github.com/sylikc/pyexiftool) to communicate with [ExifTool](https://exiftool.org). If you encounter installation issues:
+
+**Ubuntu/Debian:**
+```bash
 wget https://exiftool.org/Image-ExifTool-12.51.tar.gz
 gzip -dc Image-ExifTool-12.51.tar.gz | tar -xf -
 cd Image-ExifTool-12.51
@@ -144,14 +94,20 @@ make test
 sudo make install
 ```
 
+## Acknowledgements
+
+- Code for reading binary COLMAP data is partly borrowed from [COLMAP Utility Scripts](https://github.com/uzh-rpg/colmap_utils) by [uzh-rpg](https://github.com/uzh-rpg)
+- Thanks to [Baptiste](https://github.com/Baptiste-AIST) for providing the wooden block reconstruction data from [[1](https://robocip-aist.github.io/sii_nerf_scans/)]
+
 ## References
-<div class="csl-entry">[1] Erich, F., Bourreau, B., <i>Neural Scanning: Rendering and determining geometry of household objects using Neural Radiance Fields</i> <a href="https://robocip-aist.github.io/sii_nerf_scans/">Link</a>. 2022</div>
+
+[1] Erich, F., Bourreau, B., *Neural Scanning: Rendering and determining geometry of household objects using Neural Radiance Fields*. [Link](https://robocip-aist.github.io/sii_nerf_scans/). 2022
 
 ## Citation
 
-Please cite this paper, if this work helps you with your research:
+If this work helps with your research, please cite:
 
-```
+```bibtex
 @inproceedings{meyer2023cherrypicker,
   title={CherryPicker: Semantic skeletonization and topological reconstruction of cherry trees},
   author={Meyer, Lukas and Gilson, Andreas and Scholz, Oliver and Stamminger, Marc},

@@ -4,9 +4,6 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
-import logging
-from typing import Tuple
-
 import numpy as np
 
 
@@ -82,4 +79,3 @@ def ls_intersection_of_lines_parallelized(P0: np.ndarray, N: np.ndarray) -> np.n
     intersctions_3d = intersect_parallelized(P0, N)
 
     return intersctions_3d[..., 0]
-

@@ -8,47 +8,63 @@ See LICENSE file for more information.
 
 import logging
 import os
-import time
-from copy import deepcopy
-from functools import partial, wraps
+from functools import partial
 from multiprocessing import Pool
-from typing import Tuple, Union
+from typing import Tuple
 
 import cv2
 import numpy as np
-import open3d as o3d
 from tqdm import tqdm
 
 from .opt import (
-    intersect,
     intersect_parallelized,
-    ls_intersection_of_lines,
-    ls_intersection_of_lines_parallelized,
 )
 from .sfm.colmap import COLMAPProject
-from .utils import detect_aruco_marker, ray_cast_aruco_corners
+from .utils import ray_cast_aruco_corners
 
 
-def timeit(func):
-    @wraps(func)
-    def timeit_wrapper(*args, **kwargs):
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        total_time = end_time - start_time
-        logging.debug(
-            f"Function {func.__name__}{args} {kwargs} took {total_time:.4f} seconds"
-        )
-        return result
+def detect_aruco_marker(
+    image: np.ndarray,
+    dict_type: int = cv2.aruco.DICT_4X4_100,
+    aruco_parameters: cv2.aruco.DetectorParameters = cv2.aruco.DetectorParameters(),
+) -> Tuple[tuple, np.ndarray]:
+    """
+    Info: https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
+    More information on aruco parameters: https://docs.opencv.org/4.x/d1/dcd/structcv_1_1aruco_1_1DetectorParameters.html
 
-    return timeit_wrapper
+    @param dict_type:
+    @param image:
+    @param aruco_parameters:
 
+    Aruco Corners
 
+        p1------------p2
+        |             |
+        |             |
+        |             |
+        |             |
+        p4------------p3
+
+    :param image:
+    :return:
+    """
+
+    image = cv2.imread(image)
+    if image is None:
+        logging.warning(f"Failed to load image: {image}")
+        return None, None
+    image_size = image.shape
+    aruco_dict = cv2.aruco.getPredefinedDictionary(dict_type)
+    a = dict({aruco_dict: 23})
+    detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_parameters)
+    corners, aruco_id, _ = detector.detectMarkers(image)
+    if aruco_id is None:
+        return None, None, image_size
+    return corners, aruco_id, image_size
 class ArucoLocalizer():
     def __init__(
         self,
-        colmap_project: COLMAPProject,
-        aruco_size: float,
+        project: COLMAPProject,
         dict_type: int = cv2.aruco.DICT_4X4_50,
         target_id: int = 0,
     ):
@@ -75,12 +91,11 @@ class ArucoLocalizer():
                 | LS for Intersection of Lines |
                 -------------------------------
 
-        :param colmap_project: COLMAPProject instance (or any SfmProjectBase implementation)
-        :param aruco_size: Size of the ArUco marker in meters
+        :param project: COLMAPProject instance (or any SfmProjectBase implementation)
         :param dict_type: ArUco dictionary type
         :param target_id: Target ArUco ID to use as origin (default: 0)
         """
-        self.project = colmap_project
+        self.project = project
         self.aruco_marker_detected = None
 
         # Values to calculate 3D point of intersection
@@ -108,7 +123,6 @@ class ArucoLocalizer():
             full_path = os.path.join(self.project.images_path, image.name)
             self.image_names.append(full_path)
 
-        self.aruco_size = aruco_size
         
         # Add attributes to store ArUco detection results
         self._init_image_attributes()
@@ -175,7 +189,6 @@ class ArucoLocalizer():
 
         return self.aruco_distance, self.aruco_corners_3d
 
-    @timeit
     def __detect(self):
         """
         Detects the aruco corners in the image and extracts the aruco id.
@@ -325,24 +338,3 @@ class ArucoLocalizer():
             self.calculate_all_aruco_positions()
         return self.all_aruco_corners_3d
 
-
-# Example usage
-if __name__ == "__main__":
-    # Load any SfM project (COLMAP in this case)
-    project = COLMAPProject("/path/to/colmap/project")
-    
-    # Create ArUco localizer
-    localizer = ArucoLocalizer(
-        colmap_project=project,
-        aruco_size=0.05,  # 5cm marker
-        target_id=0
-    )
-    
-    # Run detection and scaling
-    distance, corners_3d = localizer.run()
-
-
-    # Save scaled reconstruction
-    project.save("/path/to/scaled_output")
-    
- 

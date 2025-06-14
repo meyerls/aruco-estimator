@@ -1,7 +1,4 @@
-import argparse
 import collections
-import os
-import struct
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -120,9 +117,15 @@ class SfmProjectBase(ABC):
         self._cameras = {}
         self._images = {}
         self._points3D = {}
+        # self.images_path = None
         self._load_data()
         self._verify_data_loaded()
-    
+        
+        # self._detected_tags = dict()
+    @abstractmethod
+    def load_image_by_id(self,image_id):
+        # return opencv image
+        pass
     @abstractmethod
     def _load_data(self):
         """Load project data from files."""
@@ -130,6 +133,7 @@ class SfmProjectBase(ABC):
     
     def _verify_data_loaded(self):
         """Check that data was successfully loaded."""
+        # assert self.images_path is not None
         if not self._cameras and not self._images and not self._points3D:
             raise ValueError(f"No data loaded from {self._project_path}")
         print(f"Loaded {len(self._cameras)} cameras, {len(self._images)} images, {len(self._points3D)} points")
@@ -139,6 +143,7 @@ class SfmProjectBase(ABC):
         """Save project data to files."""
         pass
     
+
     def transform(self, transform_matrix):
         """Apply 4x4 transformation matrix to poses and 3D points."""
         if transform_matrix.shape != (4, 4):

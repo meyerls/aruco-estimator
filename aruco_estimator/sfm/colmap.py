@@ -27,11 +27,10 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import argparse
-import collections
 import os
 import struct
 
+import cv2
 import numpy as np
 
 from aruco_estimator.sfm.common import (
@@ -51,6 +50,9 @@ class COLMAPProject(SfmProjectBase):
         self.sparse_folder = sparse_folder
         self.images_path = images_path or os.path.join(project_path, "images")
         super().__init__(project_path)
+    
+    def load_image_by_id(self,image_id):
+        return cv2.imread(os.path.join(self.images_path, self.images[image_id].name))
     
     def _load_data(self):
         """Load COLMAP data and convert to standardized format."""
@@ -75,54 +77,9 @@ class COLMAPProject(SfmProjectBase):
         """Save COLMAP project data."""
         if output_path is None:
             output_path = os.path.join(self._project_path, "scaled")
-        
         os.makedirs(output_path, exist_ok=True)
-        
         write_model(self._cameras, self._images, self._points3D, output_path, format_ext)
-        
-        # Save scale factor
-        # scale_file = os.path.join(output_path, "scale_factor.txt")
-        # np.savetxt(scale_file, np.array([self.scale_factor]))
-        
         print(f"Saved to {output_path}")
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Read and write COLMAP binary and text models"
-    )
-    parser.add_argument("--input_model", help="path to input model folder")
-    parser.add_argument(
-        "--input_format",
-        choices=[".bin", ".txt"],
-        help="input model format",
-        default="",
-    )
-    parser.add_argument("--output_model", help="path to output model folder")
-    parser.add_argument(
-        "--output_format",
-        choices=[".bin", ".txt"],
-        help="output model format",
-        default=".txt",
-    )
-    args = parser.parse_args()
-
-    cameras, images, points3D = read_model(
-        path=args.input_model, ext=args.input_format
-    )
-
-    print("num_cameras:", len(cameras))
-    print("num_images:", len(images))
-    print("num_points3D:", len(points3D))
-
-    if args.output_model is not None:
-        write_model(
-            cameras,
-            images,
-            points3D,
-            path=args.output_model,
-            ext=args.output_format,
-        )
 
 
 
@@ -532,7 +489,6 @@ def detect_model_format(path, ext):
         and os.path.isfile(os.path.join(path, "images" + ext))
         and os.path.isfile(os.path.join(path, "points3D" + ext))
     ):
-        print("Detected model format: '" + ext + "'")
         return True
 
     return False
@@ -578,21 +534,6 @@ if __name__ == "__main__":
     # Create a COLMAP project - converts data to standardized format
     project = COLMAPProject("door")
     
-    # Apply transformations (works with any SfM software)
-    # project.transform_scale(0.1)  
-    
     # Save the processed reconstruction
     project.save("output", format_ext=".txt")
     
-    # # Access standardized functionality - works the same for all SfM software
-    # for img_id, img in project.images.items():
-    #     extrinsics = img.extrinsics  # 4x4 matrix
-    #     camera_center = img.get_camera_center()  # 3D point
-    
-    # for cam_id, cam in project.cameras.items():
-    #     K = cam.K  # 3x3 intrinsics matrix
-    #     intrinsics_obj = cam.intrinsics  # Object with .K property
-    
-    # Future: OpenMVGProject would produce the exact same standardized format
-    # project = OpenMVGProject("/path/to/openmvg/project")
-    # # Same API works identically!
