@@ -9,7 +9,113 @@ from copy import copy
 
 import numpy as np
 import open3d as o3d
+import logging
+from typing import Tuple, Union
 
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import open3d as o3d
+from PIL import Image
+
+def qvec2rotmat(qvec):
+    return np.array(
+        [
+            [
+                1 - 2 * qvec[2] ** 2 - 2 * qvec[3] ** 2,
+                2 * qvec[1] * qvec[2] - 2 * qvec[0] * qvec[3],
+                2 * qvec[3] * qvec[1] + 2 * qvec[0] * qvec[2],
+            ],
+            [
+                2 * qvec[1] * qvec[2] + 2 * qvec[0] * qvec[3],
+                1 - 2 * qvec[1] ** 2 - 2 * qvec[3] ** 2,
+                2 * qvec[2] * qvec[3] - 2 * qvec[0] * qvec[1],
+            ],
+            [
+                2 * qvec[3] * qvec[1] - 2 * qvec[0] * qvec[2],
+                2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
+                1 - 2 * qvec[1] ** 2 - 2 * qvec[2] ** 2,
+            ],
+        ]
+    )
+
+
+
+def rotmat2qvec(R):
+    Rxx, Ryx, Rzx, Rxy, Ryy, Rzy, Rxz, Ryz, Rzz = R.flat
+    K = (
+        np.array(
+            [
+                [Rxx - Ryy - Rzz, 0, 0, 0],
+                [Ryx + Rxy, Ryy - Rxx - Rzz, 0, 0],
+                [Rzx + Rxz, Rzy + Ryz, Rzz - Rxx - Ryy, 0],
+                [Ryz - Rzy, Rzx - Rxz, Rxy - Ryx, Rxx + Ryy + Rzz],
+            ]
+        )
+        / 3.0
+    )
+    eigvals, eigvecs = np.linalg.eigh(K)
+    qvec = eigvecs[[3, 0, 1, 2], np.argmax(eigvals)]
+    if qvec[0] < 0:
+        qvec *= -1
+    return qvec
+
+def ray_cast_aruco_corners(
+    extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    n = x @ K^-1 @ R.T
+
+    :param extrinsics:
+    :param intrinsics:
+    :param corners:
+    :return:
+    """
+    R, camera_origin = extrinsics[:3, :3], extrinsics[:3, 3]
+    aruco_corners = np.concatenate((corners[0][0], np.ones((4, 1))), axis=1)
+    rays = aruco_corners @ np.linalg.inv(intrinsics).T @ R.T
+    rays_norm = rays / np.linalg.norm(rays, ord=2, axis=1, keepdims=True)
+
+    return camera_origin, rays_norm
+
+
+def detect_aruco_marker(
+    image: np.ndarray,
+    dict_type: int = cv2.aruco.DICT_4X4_100,
+    aruco_parameters: cv2.aruco.DetectorParameters = cv2.aruco.DetectorParameters(),
+) -> Tuple[tuple, np.ndarray]:
+    """
+    Info: https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
+    More information on aruco parameters: https://docs.opencv.org/4.x/d1/dcd/structcv_1_1aruco_1_1DetectorParameters.html
+
+    @param dict_type:
+    @param image:
+    @param aruco_parameters:
+
+    Aruco Corners
+
+        p1------------p2
+        |             |
+        |             |
+        |             |
+        |             |
+        p4------------p3
+
+    :param image:
+    :return:
+    """
+
+    image = cv2.imread(image)
+    if image is None:
+        logging.warning(f"Failed to load image: {image}")
+        return None, None
+    image_size = image.shape
+    aruco_dict = cv2.aruco.getPredefinedDictionary(dict_type)
+    detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_parameters)
+    corners, aruco_id, _ = detector.detectMarkers(image)
+    if aruco_id is None:
+        return None, None, image_size
+    return corners, aruco_id, image_size
 
 def kabsch_umeyama(pointset_A, pointset_B):
     """
@@ -97,47 +203,3 @@ def get_icp_transformation(source, target, trafo, max_iteration=2000):
 
     return reg_p2p
 
-
-def manual_registration(pcd_1, pcd_2):
-    """
-    Source: http://www.open3d.org/docs/latest/tutorial/Advanced/interactive_visualization.html
-
-    @param pcd_1:
-    @param pcd_2:
-    @return:
-    """
-
-    def pick_points(pcd):
-        logging.info("")
-        logging.info(
-            "1) Please pick at least three correspondences using [shift + left click]"
-        )
-        logging.info("   Press [shift + right click] to undo point picking")
-        logging.info("2) After picking points, press 'Q' to close the window")
-        viewer = o3d.visualization.VisualizerWithEditing()
-        viewer.create_window(window_name='Picker')
-        opt = viewer.get_render_option()
-        # opt.show_coordinate_frame = True
-        opt.point_size = 2.5
-        viewer.add_geometry(pcd)
-        viewer.run()  # user picks points
-        viewer.destroy_window()
-        logging.info("")
-        return viewer.get_picked_points()
-
-    def draw_registration_result(source, target, transformation):
-        source_temp = copy.deepcopy(source)
-        target_temp = copy.deepcopy(target)
-        source_temp.paint_uniform_color([1, 0.706, 0])
-        target_temp.paint_uniform_color([0, 0.651, 0.929])
-        source_temp.transform(transformation)
-        o3d.visualization.draw_geometries([source_temp, target_temp])
-
-    # pick points from two point clouds and builds correspondences
-    picked_id_source = pick_points(pcd_1)
-    picked_id_target = pick_points(pcd_2)
-
-    picked_points_1 = pcd_1.select_by_index(picked_id_source)
-    picked_points_2 = pcd_1.select_by_index(picked_id_target)
-
-    return np.asarray(picked_points_1.points), np.asarray(picked_points_2.points)

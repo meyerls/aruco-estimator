@@ -26,14 +26,13 @@ from colmap_wrapper.dataloader.bin import (
 from colmap_wrapper.dataloader.utils import generate_colmap_sparse_pc
 from tqdm import tqdm
 
-from ..aruco import detect_aruco_marker, ray_cast_aruco_corners
-from ..opt import (
+from .utils import detect_aruco_marker, ray_cast_aruco_corners
+from .opt import (
     intersect,
     intersect_parallelized,
     ls_intersection_of_lines,
     ls_intersection_of_lines_parallelized,
 )
-from .base import LocalizerBase
 
 
 def timeit(func):
@@ -51,7 +50,7 @@ def timeit(func):
     return timeit_wrapper
 
 
-class ArucoLocalizer(LocalizerBase):
+class ArucoLocalizer():
     def __init__(
         self,
         photogrammetry_software: COLMAPProject,
@@ -90,8 +89,7 @@ class ArucoLocalizer(LocalizerBase):
         :param target_id: Target ArUco ID to use as origin (default: 0)
         """
         # COLMAP.__init__(self, project_path=project_path, dense_pc=dense_path)
-        super().__init__(photogrammetry_software)
-
+        self.photogrammetry_software = photogrammetry_software.projects
         self.aruco_marker_detected = None
 
         # Values to calculate 3D point of intersection
@@ -128,6 +126,22 @@ class ArucoLocalizer(LocalizerBase):
             )
 
         self.aruco_size = aruco_size
+    @staticmethod
+    def __evaluate(aruco_corners_3d: np.ndarray) -> np.ndarray:
+        """
+        Calculates the L2 norm between every neighbouring aruco corner. Finally the distances are averaged and returned
+
+
+        @param aruco_corners_3d:
+        @return:
+        """
+        dist1 = np.linalg.norm(aruco_corners_3d[0] - aruco_corners_3d[1])
+        dist2 = np.linalg.norm(aruco_corners_3d[1] - aruco_corners_3d[2])
+        dist3 = np.linalg.norm(aruco_corners_3d[2] - aruco_corners_3d[3])
+        dist4 = np.linalg.norm(aruco_corners_3d[3] - aruco_corners_3d[0])
+
+        # Average
+        return np.mean([dist1, dist2, dist3, dist4])
 
     def run(self) -> [np.ndarray, None]:
         """
@@ -293,52 +307,12 @@ class ArucoLocalizer(LocalizerBase):
                     self.P0 = np.append(self.P0, p0)
                     self.N = np.append(self.N, n)
 
-    @staticmethod
-    def __evaluate(aruco_corners_3d: np.ndarray) -> np.ndarray:
-        """
-        Calculates the L2 norm between every neighbouring aruco corner. Finally the distances are averaged and returned
 
+    # def get_dense_scaled(self):
+    #     return self.photogrammetry_software.dense_scaled
 
-        @param aruco_corners_3d:
-        @return:
-        """
-        dist1 = np.linalg.norm(aruco_corners_3d[0] - aruco_corners_3d[1])
-        dist2 = np.linalg.norm(aruco_corners_3d[1] - aruco_corners_3d[2])
-        dist3 = np.linalg.norm(aruco_corners_3d[2] - aruco_corners_3d[3])
-        dist4 = np.linalg.norm(aruco_corners_3d[3] - aruco_corners_3d[0])
-
-        # Average
-        return np.mean([dist1, dist2, dist3, dist4])
-
-    def analyze(self):
-        """
-
-        @param true_scale: true scale of aruco marker in centimeter!
-        @return:
-        """
-
-        sf = np.zeros(len(self.P0) // 3)
-
-        for i in range(2, len(self.P0) // 3 + 1):
-            P0_i = self.P0.reshape(len(self.P0) // 3, 3)[:i]
-            N_i = self.N.reshape(len(self.N) // 12, 4, 3)[:i]
-            aruco_corners_3d = intersect_parallelized(P0=P0_i, N=N_i)
-            aruco_dist = self.__evaluate(aruco_corners_3d)
-            sf[i - 1] = (self.aruco_size) / aruco_dist
-
-        plt.figure()
-        plt.title("Scale Factor Estimation over Number of Images")
-        plt.xlabel("# Images")
-        plt.ylabel("Scale Factor")
-        plt.grid()
-        plt.plot(np.linspace(1, len(self.P0) // 3, len(self.P0) // 3)[1:], sf[1:])
-        plt.show()
-
-    def get_dense_scaled(self):
-        return self.photogrammetry_software.dense_scaled
-
-    def get_sparse_scaled(self):
-        return generate_colmap_sparse_pc(self.sparse_scaled)
+    # def get_sparse_scaled(self):
+    #     return generate_colmap_sparse_pc(self.sparse_scaled)
 
     def apply(self) -> Tuple[o3d.pybind.geometry.PointCloud, float]:
         """
@@ -412,6 +386,7 @@ class ArucoLocalizer(LocalizerBase):
         return self.all_aruco_corners_3d
 
     def write_data(self):
+        # self.project.save()
         """
         Write scaled data to files.
         """

@@ -9,16 +9,18 @@ import open3d
 from colmap_wrapper.dataloader import COLMAP
 from scipy.spatial.transform import Rotation
 
-from aruco_estimator.colmap.read_write_model import (
+from aruco_estimator.sfm.colmap import (
     Image,
-    Point3D,
+    Point3D)
+from aruco_estimator.utils import (
     qvec2rotmat,
-    read_model,
     rotmat2qvec,
-    write_model,
 )
-from aruco_estimator.colmap.visualize_model import Model
-from aruco_estimator.localizers import ArucoLocalizer
+
+from aruco_estimator.sfm.colmap import read_model, write_model
+
+from aruco_estimator.visualization import Model
+from aruco_estimator import ArucoLocalizer
 
 
 def get_normalization_transform(

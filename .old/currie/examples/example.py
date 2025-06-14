@@ -3,7 +3,7 @@ from pathlib import Path
 
 # This patches pycolmap to fix a bug in colmap_wrapper
 import aruco_estimator.patch_colmap  # noqa: F401
-from aruco_estimator.localizers import ArucoLocalizer
+from aruco_estimator import ArucoLocalizer
 from aruco_estimator.tools.colmap_recon import generate_colmap
 from aruco_estimator.tools.downloader import DOOR_DATASET, Dataset
 from aruco_estimator.visualization import ArucoVisualization

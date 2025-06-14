@@ -3,7 +3,6 @@ import click
 import cv2
 
 from aruco_estimator.tools.reassign_origin import reassign_origin
-from aruco_estimator.tools.reverse_project import reverse_project
 
 
 @click.group()
@@ -42,33 +41,9 @@ def reassign_origin_cmd(colmap_project, aruco_size, dict_type, show_original, vi
         export_path=export_path
     )
 
+#TODO Merge by tag
 
-@main.command('reverse-project')
-@click.argument('colmap_path', type=click.Path(exists=True))
-@click.argument('images_path', type=click.Path(exists=True))
-@click.argument('output_dir', type=click.Path())
-@click.option('--key-positions', type=click.Path(exists=True),
-              help='Path to key positions text file')
-@click.option('--grid-min', type=(float, float, float), default=(-2.0, -2.0, -2.0),
-              help='Minimum coordinates for grid (x,y,z)')
-@click.option('--grid-max', type=(float, float, float), default=(2.0, 2.0, 2.0),
-              help='Maximum coordinates for grid (x,y,z)')
-@click.option('--grid-points', type=int, default=4,
-              help='Number of points per dimension in grid')
-@click.option('--skip-copy', is_flag=True,
-              help='Skip saving visualization images, only save labels')
-def reverse_project_cmd(colmap_path, images_path, output_dir, key_positions, grid_min, grid_max, grid_points, skip_copy):
-    """Project 3D points onto images and create dataset."""
-    reverse_project(
-        colmap_path=colmap_path,
-        images_path=images_path,
-        output_dir=output_dir,
-        key_positions_path=key_positions,
-        grid_min=grid_min,
-        grid_max=grid_max,
-        grid_points=grid_points,
-        skip_copy=skip_copy
-    )
+#TODO Show with tags
 
 
 if __name__ == '__main__':
