@@ -23,7 +23,7 @@ This repository is tested on Python 3.6+ and can be installed from [PyPi](https:
 pip install aruco-estimator
 ```
 
-However, the above PyPI release is out of date and broken as of 2025-03-22.  Instead, you should install from source:
+However, the project is undergoing a refactor install this branch for a working version.
 ```
 pip install git+https://github.com/meyerls/aruco-estimator
 ```
