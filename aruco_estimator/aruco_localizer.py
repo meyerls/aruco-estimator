@@ -28,69 +28,6 @@ from .opt import (
     ls_intersection_of_lines_parallelized,
 )
 
-# def normalize_poses_and_points(cameras, images, points3D, transform: np.ndarray):
-#     """Apply normalization transform to camera poses and 3D points."""
-
-#     # Extract the scale factor from the transformation matrix
-#     scale_factor = np.linalg.norm(transform[:3, 0])
-#     logging.info(f"Extracted scale factor from transform: {scale_factor:.4f}")
-
-#     # Prepare a rotation-only transform (scale removed)
-#     normalized_transform = np.eye(4)
-#     normalized_transform[:3, :3] = transform[:3, :3] / scale_factor
-#     normalized_transform[:3, 3] = transform[:3, 3] / scale_factor
-
-#     # Compute the inverse transform for camera poses
-#     inverse_normalized_transform = np.linalg.inv(normalized_transform)
-
-#     # Transform camera poses
-#     transformed_images = {}
-#     for image_id, image in images.items():
-#         # Original pose
-#         R = qvec2rotmat(image.qvec)
-#         t = image.tvec
-#         pose = np.eye(4)
-#         pose[:3, :3] = R
-#         pose[:3, 3] = t
-
-#         # Apply inverse of normalization transform
-#         rotated_pose = pose @ inverse_normalized_transform
-#         rotated_pose[:3, 3] *= scale_factor  # Reapply scale only to translation
-
-#         # Extract new rotation and translation
-#         new_R = rotated_pose[:3, :3]
-#         new_t = rotated_pose[:3, 3]
-
-#         # Create new image with transformed pose
-#         transformed_images[image_id] = Image(
-#             id=image.id,
-#             qvec=rotmat2qvec(new_R),
-#             tvec=new_t,
-#             camera_id=image.camera_id,
-#             name=image.name,
-#             xys=image.xys,
-#             point3D_ids=image.point3D_ids,
-#         )
-
-#     # Transform 3D points
-#     transformed_points3D = {}
-#     for point3D_id, point3D in points3D.items():
-#         point_h = np.append(point3D.xyz, 1)
-#         transformed_h = normalized_transform @ point_h
-#         new_xyz = transformed_h[:3]
-#         transformed_points3D[point3D_id] = Point3D(
-#             id=point3D.id,
-#             xyz=new_xyz,
-#             rgb=point3D.rgb,
-#             error=point3D.error,
-#             image_ids=point3D.image_ids,
-#             point2D_idxs=point3D.point2D_idxs,
-#         )
-
-#     return cameras, transformed_images, transformed_points3D
-
-
-
 def timeit(func):
     @wraps(func)
     def timeit_wrapper(*args, **kwargs):
@@ -142,7 +79,7 @@ class ArucoLocalizer():
         :param dict_type: ArUco dictionary type
         :param target_id: Target ArUco ID to use as origin (default: 0)
         """
-        self.colmap_project = colmap_project
+        self.project = colmap_project
         self.aruco_marker_detected = None
 
         # Values to calculate 3D point of intersection
@@ -169,8 +106,8 @@ class ArucoLocalizer():
         
         # Prepare image paths for processing
         self.image_names = []
-        for image_id, image in self.colmap_project.images.items():
-            full_path = os.path.join(self.colmap_project.images_path, image.name)
+        for image_id, image in self.project.images.items():
+            full_path = os.path.join(self.project.images_path, image.name)
             self.image_names.append(full_path)
 
         self.aruco_size = aruco_size
@@ -180,7 +117,7 @@ class ArucoLocalizer():
         
     def _init_image_attributes(self):
         """Initialize additional attributes for images to store ArUco data."""
-        for image_id, image in self.colmap_project.images.items():
+        for image_id, image in self.project.images.items():
             # We'll store these as separate dictionaries since namedtuples are immutable
             if not hasattr(self, 'image_aruco_data'):
                 self.image_aruco_data = {}
@@ -257,7 +194,7 @@ class ArucoLocalizer():
                 )
             )
 
-        if len(result) != len(self.colmap_project.images):
+        if len(result) != len(self.project.images):
             raise ValueError(
                 "Thread return has not the same length as the input parameters!"
             )
@@ -265,12 +202,12 @@ class ArucoLocalizer():
         aruco_ids = []
         self.all_aruco_ids = []  # Reset the list of all ArUco IDs
 
-        for image_idx, image_id in enumerate(self.colmap_project.images.keys()):
-            image = self.colmap_project.images[image_id]
+        for image_idx, image_id in enumerate(self.project.images.keys()):
+            image = self.project.images[image_id]
             
             # Get camera parameters
             camera_id = image.camera_id
-            camera = self.colmap_project.cameras[camera_id]
+            camera = self.project.cameras[camera_id]
             
             # Calculate scaling ratios
             ratio_x = camera.width / result[image_idx][2][1]
@@ -329,17 +266,17 @@ class ArucoLocalizer():
         self.all_P0 = {id: np.array([]) for id in self.all_aruco_ids}
         self.all_N = {id: np.array([]) for id in self.all_aruco_ids}
 
-        for image_id in self.colmap_project.images.keys():
+        for image_id in self.project.images.keys():
             if self.image_aruco_data[image_id]['aruco_corners'] is not None:
                 current_id = self.image_aruco_data[image_id]['aruco_id'][0, 0]
                 
                 # Get image and camera data
-                image = self.colmap_project.images[image_id]
-                camera = self.colmap_project.cameras[image.camera_id]
+                image = self.project.images[image_id]
+                camera = self.project.cameras[image.camera_id]
 
                 # Process all detected ArUco markers using the standardized interface
                 p0, n = ray_cast_aruco_corners(
-                    extrinsics=image.extrinsics,
+                    extrinsics=image.world_extrinsics,
                     intrinsics=camera.intrinsics.K,
                     corners=self.image_aruco_data[image_id]['aruco_corners'],
                 )
@@ -389,23 +326,6 @@ class ArucoLocalizer():
         if not self.all_aruco_corners_3d:
             self.calculate_all_aruco_positions()
         return self.all_aruco_corners_3d
-
-    # def apply_scale(self):
-    #     """
-    #     Apply the calculated scale factor to the SfM project.
-        
-    #     :return: Scale factor
-    #     """
-    #     if self.aruco_distance is None:
-    #         raise ValueError("Must run ArUco detection first")
-            
-    #     self.scale_factor = self.aruco_size / self.aruco_distance
-        
-    #     # Apply scale to the SfM project using standardized interface
-    #     self.colmap_project.transform_scale(self.scale_factor)
-        
-    #     logging.info(f"Applied scale factor: {self.scale_factor}")
-    #     return self.scale_factor
 
 
 # Example usage

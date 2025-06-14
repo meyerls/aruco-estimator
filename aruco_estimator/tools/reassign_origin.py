@@ -9,7 +9,6 @@ import numpy as np
 import open3d
 from scipy.spatial.transform import Rotation
 
-from aruco_estimator.sfm.colmap import COLMAPProject
 from aruco_estimator.utils import qvec2rotmat, rotmat2qvec
 from aruco_estimator.visualization import Model
 from aruco_estimator import ArucoLocalizer
@@ -115,6 +114,7 @@ def reassign_origin(
         export_tags: Whether to export tag positions (default: False)
         export_path: Path to export tag positions (default: project_path/aruco_tags.json)
     """
+    from aruco_estimator.sfm.colmap import COLMAPProject
     project_path = Path(colmap_project)
     logging.basicConfig(level=logging.INFO)
 

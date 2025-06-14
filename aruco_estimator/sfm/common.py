@@ -45,6 +45,14 @@ class Camera(BaseCamera):
                 [0, f, cy],
                 [0, 0, 1]
             ])
+        elif self.model == "SIMPLE_RADIAL":
+            f, cx, cy, k1 = self.params  # k1 is distortion, not used in K matrix
+            return np.array([
+                [f, 0, cx],
+                [0, f, cy],
+                [0, 0, 1]
+            ])
+    
         else:
             raise NotImplementedError(f"Camera model {self.model} not implemented")
     
@@ -59,24 +67,22 @@ class Camera(BaseCamera):
 
 class Image(BaseImage):
     """Standardized image class - all SfM software must produce this format."""
-    def get_camera_matrix(self):
-        """Get 4x4 camera transformation matrix."""
+    @property
+    def world_extrinsics(self):
+        """Get 4x4 camera to world transformation matrix."""
         R = qvec2rotmat(self.qvec)
         t = self.tvec.reshape(3, 1)
         T = np.eye(4)
         T[:3, :3] = R
         T[:3, 3] = t.flatten()
-        return T
+        return np.linalg.inv(T)
     
     def get_camera_center(self):
         """Get camera center in world coordinates."""
         R = qvec2rotmat(self.qvec)
         return -R.T @ self.tvec
     
-    @property
-    def extrinsics(self):
-        """Get 4x4 extrinsics matrix."""
-        return self.get_camera_matrix()
+
 
 
 # Camera models
@@ -136,55 +142,48 @@ class SfmProjectBase(ABC):
         pass
     
     def transform(self, transform_matrix):
-        return
         """Apply 4x4 transformation matrix to poses and 3D points."""
         if transform_matrix.shape != (4, 4):
             raise ValueError("Transform matrix must be 4x4")
         
-        # Extract the scale factor from the transformation matrix
-        scale_factor = np.linalg.norm(transform_matrix[:3, 0])
-        
-        # Prepare a rotation-only transform (scale removed)
-        normalized_transform = np.eye(4)
-        normalized_transform[:3, :3] = transform_matrix[:3, :3] / scale_factor
-        normalized_transform[:3, 3] = transform_matrix[:3, 3] / scale_factor
-        
-        # Compute the inverse transform for camera poses
-        inverse_normalized_transform = np.linalg.inv(normalized_transform)
-        
         # Transform camera poses
         for img_id, img in self._images.items():
-            # Original pose
+            # Get current camera-to-world pose
             R = qvec2rotmat(img.qvec)
-            t = img.tvec
-            pose = np.eye(4)
-            pose[:3, :3] = R
-            pose[:3, 3] = t
+            current_c2w = np.eye(4)
+            current_c2w[:3, :3] = R.T        # Camera-to-world rotation
+            current_c2w[:3, 3] = -R.T @ img.tvec  # Camera center
             
-            # Apply inverse of normalization transform
-            rotated_pose = pose @ inverse_normalized_transform
-            rotated_pose[:3, 3] *= scale_factor  # Reapply scale only to translation
+            # Apply transformation: new_c2w = transform * old_c2w
+            new_c2w = transform_matrix @ current_c2w
             
-            # Extract new rotation and translation
-            new_R = rotated_pose[:3, :3]
-            new_t = rotated_pose[:3, 3]
+            # Convert back to world-to-camera for qvec/tvec storage
+            new_w2c = np.linalg.inv(new_c2w)
+            new_R_w2c = new_w2c[:3, :3]
+            new_t_w2c = new_w2c[:3, 3]
             
-            # Create new image with transformed pose
-            # new_img = img._replace(qvec=rotmat2qvec(new_R), tvec=new_t)
-            # self._images[img_id] = Image(*new_img)
-            self._images[img_id] = img._replace(qvec=rotmat2qvec(new_R), tvec=new_t)
+            # Update image with new qvec/tvec
+            new_qvec = rotmat2qvec(new_R_w2c)
+            self._images[img_id] = img._replace(qvec=new_qvec, tvec=new_t_w2c)
         
         # Transform 3D points
         for pt_id, pt in self._points3D.items():
             point_h = np.append(pt.xyz, 1)
-            transformed_h = normalized_transform @ point_h
+            transformed_h = transform_matrix @ point_h
             new_xyz = transformed_h[:3]
-            new_pt = pt._replace(xyz=new_xyz)
-            self._points3D[pt_id] = new_pt
+            self._points3D[pt_id] = pt._replace(xyz=new_xyz)
         
-        # Update scale factor
-        self.scale_factor *= scale_factor
-    
+        # Update scale factor (simple norm of first column)
+        scale = np.linalg.norm(transform_matrix[:3, 0])
+        self.scale_factor *= scale
+
+    def get_camera_matrix_for_image(self, img):
+        """Helper to get camera-to-world matrix for a specific image."""
+        R = qvec2rotmat(img.qvec)
+        T = np.eye(4)
+        T[:3, :3] = R.T
+        T[:3, 3] = -R.T @ img.tvec
+        return T
     @property
     def cameras(self):
         return self._cameras
@@ -197,65 +196,3 @@ class SfmProjectBase(ABC):
     def points3D(self):
         return self._points3D
     
-
-# def normalize_poses_and_points(cameras, images, points3D, transform: np.ndarray):
-#     """Apply normalization transform to camera poses and 3D points."""
-
-#     # Extract the scale factor from the transformation matrix
-#     scale_factor = np.linalg.norm(transform[:3, 0])
-#     logging.info(f"Extracted scale factor from transform: {scale_factor:.4f}")
-
-#     # Prepare a rotation-only transform (scale removed)
-#     normalized_transform = np.eye(4)
-#     normalized_transform[:3, :3] = transform[:3, :3] / scale_factor
-#     normalized_transform[:3, 3] = transform[:3, 3] / scale_factor
-
-#     # Compute the inverse transform for camera poses
-#     inverse_normalized_transform = np.linalg.inv(normalized_transform)
-
-#     # Transform camera poses
-#     transformed_images = {}
-#     for image_id, image in images.items():
-#         # Original pose
-#         R = qvec2rotmat(image.qvec)
-#         t = image.tvec
-#         pose = np.eye(4)
-#         pose[:3, :3] = R
-#         pose[:3, 3] = t
-
-#         # Apply inverse of normalization transform
-#         rotated_pose = pose @ inverse_normalized_transform
-#         rotated_pose[:3, 3] *= scale_factor  # Reapply scale only to translation
-
-#         # Extract new rotation and translation
-#         new_R = rotated_pose[:3, :3]
-#         new_t = rotated_pose[:3, 3]
-
-#         # Create new image with transformed pose
-#         transformed_images[image_id] = Image(
-#             id=image.id,
-#             qvec=rotmat2qvec(new_R),
-#             tvec=new_t,
-#             camera_id=image.camera_id,
-#             name=image.name,
-#             xys=image.xys,
-#             point3D_ids=image.point3D_ids,
-#         )
-
-#     # Transform 3D points
-#     transformed_points3D = {}
-#     for point3D_id, point3D in points3D.items():
-#         point_h = np.append(point3D.xyz, 1)
-#         transformed_h = normalized_transform @ point_h
-#         new_xyz = transformed_h[:3]
-#         transformed_points3D[point3D_id] = Point3D(
-#             id=point3D.id,
-#             xyz=new_xyz,
-#             rgb=point3D.rgb,
-#             error=point3D.error,
-#             image_ids=point3D.image_ids,
-#             point2D_idxs=point3D.point2D_idxs,
-#         )
-
-#     return cameras, transformed_images, transformed_points3D
-

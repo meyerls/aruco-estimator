@@ -34,11 +34,7 @@ import struct
 
 import numpy as np
 from aruco_estimator.sfm.common import CAMERA_MODEL_IDS, CAMERA_MODEL_NAMES, Image, Point3D, Camera, SfmProjectBase
-from colmap_wrapper.dataloader.bin import (
-    write_cameras_text,
-    write_images_text,
-    write_points3D_text,
-)
+
 
 class COLMAPProject(SfmProjectBase):
     """COLMAP project implementation."""
@@ -575,7 +571,7 @@ if __name__ == "__main__":
     project = COLMAPProject("door")
     
     # Apply transformations (works with any SfM software)
-    project.transform_scale(0.1)  
+    # project.transform_scale(0.1)  
     
     # Save the processed reconstruction
     project.save("output", format_ext=".txt")

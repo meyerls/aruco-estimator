@@ -43,7 +43,6 @@ def reassign_origin_cmd(colmap_project, aruco_size, dict_type, show_original, vi
 
 #TODO Merge by tag
 
-#TODO Show with tags
 
 
 if __name__ == '__main__':
