@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-import math
 from aruco_estimator.utils import kabsch_umeyama,get_transformation_matrix_4x4, apply_transformation,apply_transformation_4x4
 
 def test_identical_point_sets():

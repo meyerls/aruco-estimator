@@ -54,7 +54,38 @@ aruco-estimator register ./door --target-id 7 --show
     <img width="100%" src="assets/output.gif?raw=true">
 </p>
 
-## Known Limitations
+### Merging by Tag
+ blah
+
+### Scripting
+
+``` python 
+from aruco_estimator.sfm.colmap import COLMAPProject
+project_path = Path(project)
+
+# Load COLMAP project using new interface
+logging.info("Loading COLMAP project...")
+project = COLMAPProject(str(project_path))
+
+# Store original project state if needed for visualization
+original_project = None
+if show_original:
+    original_project = deepcopy(project)
+
+# Run ArUco detection
+logging.info("Detecting ArUco markers...")
+aruco_localizer = ArucoLocalizer(
+    project=project,
+    dict_type=dict_type,
+    target_id=target_id,
+)
+aruco_distance, aruco_corners_3d = aruco_localizer.run()
+logging.info(f"Target ArUco ID: {target_id}")
+logging.info(f"ArUco 3d points: {aruco_corners_3d}")
+logging.info(f"ArUco marker distance: {aruco_distance}")
+```
+
+## Known Limitations 
 
 - Dense cloud visualization and modification is currently broken
 - Only SIMPLE_RADIAL and PINHOLE camera models are supported
@@ -63,11 +94,13 @@ aruco-estimator register ./door --target-id 7 --show
 - Only COLMAP .bin and .txt models are supported
 
 ## Roadmap
-- [ ] Replace get_normalization_transform with kabsch_umeyama
-- [ ] Geo-referencing of ArUco markers with Earth coordinate system using GPS or RTK
+- [x] Replace get_normalization_transform with kabsch_umeyama
+- [ ] Project base should own localizer
+- [ ] Implement the merge by tag tool 
 - [ ] Support for additional camera models
 - [ ] Improved pose estimation robustness
 - [ ] Dense cloud visualization fixes
+- [ ] Geo-referencing of ArUco markers with Earth coordinate system using GPS or RT
 
 ## Troubleshooting
 

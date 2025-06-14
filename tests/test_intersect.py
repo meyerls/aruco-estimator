@@ -87,8 +87,7 @@ true_value = np.array([[2.08410173, -0.25158843, 4.42470409],
                         [2.64014018, 0.35195336, 4.20018012],
                         [2.09960334, 0.34874095, 4.46436423]])
 
-def test_outlier_rejection():
-    pass
+
 
 def test_intersection():
     ret = ls_intersection_of_lines(P0, N)

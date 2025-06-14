@@ -117,7 +117,6 @@ class SfmProjectBase(ABC):
         self._cameras = {}
         self._images = {}
         self._points3D = {}
-        # self.images_path = None
         self._load_data()
         self._verify_data_loaded()
         
@@ -133,7 +132,6 @@ class SfmProjectBase(ABC):
     
     def _verify_data_loaded(self):
         """Check that data was successfully loaded."""
-        # assert self.images_path is not None
         if not self._cameras and not self._images and not self._points3D:
             raise ValueError(f"No data loaded from {self._project_path}")
         print(f"Loaded {len(self._cameras)} cameras, {len(self._images)} images, {len(self._points3D)} points")

@@ -6,9 +6,7 @@ See LICENSE file for more information.
 
 import logging
 from typing import Tuple
-
 import numpy as np
-from scipy.spatial.transform import Rotation
 
 
 def qvec2rotmat(qvec):
@@ -30,8 +28,6 @@ def qvec2rotmat(qvec):
                 1 - 2 * qvec[1] ** 2 - 2 * qvec[2] ** 2,
             ],
         ])
-
-
 
 def rotmat2qvec(R):
     Rxx, Ryx, Rzx, Rxy, Ryy, Rzy, Rxz, Ryz, Rzz = R.flat
@@ -68,9 +64,6 @@ def get_normalization_transform(
         [-half_size, -half_size, 0],  # bottom-left
     ])
     
-    # Calculate current ArUco dimensions for logging
-    center = np.mean(aruco_corners_3d, axis=0)
-    
     # Calculate edge lengths for logging
     edge1_length = np.linalg.norm(aruco_corners_3d[1] - aruco_corners_3d[0])
     edge2_length = np.linalg.norm(aruco_corners_3d[3] - aruco_corners_3d[0]) 
@@ -97,6 +90,7 @@ def get_normalization_transform(
     )
     
     return transform
+
 def ray_cast_aruco_corners(
     extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple
 ) -> Tuple[np.ndarray, np.ndarray]:
