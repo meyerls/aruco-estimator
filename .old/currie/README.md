@@ -1,3 +1,7 @@
-This doesnt use the module code and wont be maintained as part of it. By directly calling a colmap process and performing reconstruction, it breaks the contract of the module, which is to perform registration tasks on precomputed reconstruction projects. I've left it accesible as I didnt call it out during your PR.
+This doesnt use the module code and wont be maintained as part of it. 
 
-There are colmap dependencies throughout the project which I'll be isolating before the next PyPi release.
+By directly calling a colmap process and performing reconstruction,
+* it breaks the contract of the module, which is to perform registration and scaling tasks on precomputed reconstruction projects.
+* It adds a major dependency (colmap, pycolmap) without general benefit.
+
+I've left it accesible as I didnt call it out during your PR. 
