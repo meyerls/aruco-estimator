@@ -2,7 +2,7 @@
     <img width="100%" src="assets/wood.png">
 </p>
 
-# Automatic Scale Factor Estimation Based on ArUco Markers
+# Automatic Registration Estimation Based on ArUco Markers
 
 <a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/aruco-estimator"></a>
 <a href="https://pypi.org/project/aruco-estimator/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aruco-estimator"></a>
