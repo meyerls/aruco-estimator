@@ -23,7 +23,7 @@ pip install aruco-estimator
 
 **Note:** The PyPI release is currently out of date and broken as of 2025-03-22. For the latest stable version, install directly from source:
 
-```bash
+```
 pip install git+https://github.com/meyerls/aruco-estimator
 ```
 
