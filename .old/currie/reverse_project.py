@@ -1,8 +1,9 @@
 import os
+
 import cv2
 import numpy as np
 
-from aruco_estimator.colmap.read_write_model import read_model
+from aruco_estimator.sfm.colmap import read_model
 
 
 def read_key_positions(filepath):

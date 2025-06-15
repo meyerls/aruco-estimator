@@ -12,14 +12,57 @@ import numpy as np
 import open3d as o3d
 from colmap_wrapper.colmap import COLMAP
 
-from aruco_estimator.localizers import ArucoLocalizer
+from aruco_estimator import ArucoLocalizer
 from aruco_estimator.utils import (
     align_point_set,
-    manual_registration,
     plot_aligned_pointset,
 )
 from aruco_estimator.visualization import ArucoVisualization
 
+
+def manual_registration(pcd_1, pcd_2):
+    """
+    Source: http://www.open3d.org/docs/latest/tutorial/Advanced/interactive_visualization.html
+
+    @param pcd_1:
+    @param pcd_2:
+    @return:
+    """
+
+    def pick_points(pcd):
+        logging.info("")
+        logging.info(
+            "1) Please pick at least three correspondences using [shift + left click]"
+        )
+        logging.info("   Press [shift + right click] to undo point picking")
+        logging.info("2) After picking points, press 'Q' to close the window")
+        viewer = o3d.visualization.VisualizerWithEditing()
+        viewer.create_window(window_name='Picker')
+        opt = viewer.get_render_option()
+        # opt.show_coordinate_frame = True
+        opt.point_size = 2.5
+        viewer.add_geometry(pcd)
+        viewer.run()  # user picks points
+        viewer.destroy_window()
+        logging.info("")
+        return viewer.get_picked_points()
+
+    def draw_registration_result(source, target, transformation):
+        source_temp = copy.deepcopy(source)
+        target_temp = copy.deepcopy(target)
+        source_temp.paint_uniform_color([1, 0.706, 0])
+        target_temp.paint_uniform_color([0, 0.651, 0.929])
+        source_temp.transform(transformation)
+        o3d.visualization.draw_geometries([source_temp, target_temp])
+
+    # pick points from two point clouds and builds correspondences
+    picked_id_source = pick_points(pcd_1)
+    picked_id_target = pick_points(pcd_2)
+
+    picked_points_1 = pcd_1.select_by_index(picked_id_source)
+    picked_points_2 = pcd_1.select_by_index(picked_id_target)
+
+    return np.asarray(picked_points_1.points), np.asarray(picked_points_2.points)
 
 class ArucoRegistration(object):
     def __init__(self, project_path_a: str, project_path_b: str, dense_pc: str = 'fused.ply'):

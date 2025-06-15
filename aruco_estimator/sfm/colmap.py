@@ -27,52 +27,60 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-
-import argparse
-import collections
 import os
 import struct
 
+import cv2
 import numpy as np
 
-CameraModel = collections.namedtuple(
-    "CameraModel", ["model_id", "model_name", "num_params"]
-)
-Camera = collections.namedtuple(
-    "Camera", ["id", "model", "width", "height", "params"]
-)
-BaseImage = collections.namedtuple(
-    "Image", ["id", "qvec", "tvec", "camera_id", "name", "xys", "point3D_ids"]
-)
-Point3D = collections.namedtuple(
-    "Point3D", ["id", "xyz", "rgb", "error", "image_ids", "point2D_idxs"]
+from aruco_estimator.sfm.common import (
+    CAMERA_MODEL_IDS,
+    CAMERA_MODEL_NAMES,
+    Camera,
+    Image,
+    Point3D,
+    SfmProjectBase,
 )
 
 
-class Image(BaseImage):
-    def qvec2rotmat(self):
-        return qvec2rotmat(self.qvec)
+class COLMAPProject(SfmProjectBase):
+    """COLMAP project implementation."""
+    
+    def __init__(self, project_path, sparse_folder="sparse/", images_path=None):
+        self.sparse_folder = sparse_folder
+        self.images_path = images_path or os.path.join(project_path, "images")
+        super().__init__(project_path)
+    
+    def load_image_by_id(self,image_id):
+        return cv2.imread(os.path.join(self.images_path, self.images[image_id].name))
+    
+    def _load_data(self):
+        """Load COLMAP data and convert to standardized format."""
+        sparse_path = os.path.join(self._project_path, self.sparse_folder)
+        
+        if not os.path.exists(sparse_path):
+            raise FileNotFoundError(f"Sparse folder {sparse_path} does not exist")
+        
+        # Load raw COLMAP data
+        cameras, images, points3D = read_model(sparse_path)
+        
+        # Convert to standardized format
+        self._cameras = {
+            cam_id: Camera(*cam) for cam_id, cam in cameras.items()
+        }
+        self._images = {
+            img_id: Image(*img) for img_id, img in images.items()
+        }
+        self._points3D = points3D
+    
+    def save(self, output_path=None, format_ext=".txt"):
+        """Save COLMAP project data."""
+        if output_path is None:
+            output_path = os.path.join(self._project_path, "scaled")
+        os.makedirs(output_path, exist_ok=True)
+        write_model(self._cameras, self._images, self._points3D, output_path, format_ext)
+        print(f"Saved to {output_path}")
 
-
-CAMERA_MODELS = {
-    CameraModel(model_id=0, model_name="SIMPLE_PINHOLE", num_params=3),
-    CameraModel(model_id=1, model_name="PINHOLE", num_params=4),
-    CameraModel(model_id=2, model_name="SIMPLE_RADIAL", num_params=4),
-    CameraModel(model_id=3, model_name="RADIAL", num_params=5),
-    CameraModel(model_id=4, model_name="OPENCV", num_params=8),
-    CameraModel(model_id=5, model_name="OPENCV_FISHEYE", num_params=8),
-    CameraModel(model_id=6, model_name="FULL_OPENCV", num_params=12),
-    CameraModel(model_id=7, model_name="FOV", num_params=5),
-    CameraModel(model_id=8, model_name="SIMPLE_RADIAL_FISHEYE", num_params=4),
-    CameraModel(model_id=9, model_name="RADIAL_FISHEYE", num_params=5),
-    CameraModel(model_id=10, model_name="THIN_PRISM_FISHEYE", num_params=12),
-}
-CAMERA_MODEL_IDS = dict(
-    [(camera_model.model_id, camera_model) for camera_model in CAMERA_MODELS]
-)
-CAMERA_MODEL_NAMES = dict(
-    [(camera_model.model_name, camera_model) for camera_model in CAMERA_MODELS]
-)
 
 
 def read_next_bytes(fid, num_bytes, format_char_sequence, endian_character="<"):
@@ -481,7 +489,6 @@ def detect_model_format(path, ext):
         and os.path.isfile(os.path.join(path, "images" + ext))
         and os.path.isfile(os.path.join(path, "points3D" + ext))
     ):
-        print("Detected model format: '" + ext + "'")
         return True
 
     return False
@@ -521,85 +528,12 @@ def write_model(cameras, images, points3D, path, ext=".bin"):
     return cameras, images, points3D
 
 
-def qvec2rotmat(qvec):
-    return np.array(
-        [
-            [
-                1 - 2 * qvec[2] ** 2 - 2 * qvec[3] ** 2,
-                2 * qvec[1] * qvec[2] - 2 * qvec[0] * qvec[3],
-                2 * qvec[3] * qvec[1] + 2 * qvec[0] * qvec[2],
-            ],
-            [
-                2 * qvec[1] * qvec[2] + 2 * qvec[0] * qvec[3],
-                1 - 2 * qvec[1] ** 2 - 2 * qvec[3] ** 2,
-                2 * qvec[2] * qvec[3] - 2 * qvec[0] * qvec[1],
-            ],
-            [
-                2 * qvec[3] * qvec[1] - 2 * qvec[0] * qvec[2],
-                2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
-                1 - 2 * qvec[1] ** 2 - 2 * qvec[2] ** 2,
-            ],
-        ]
-    )
 
-
-def rotmat2qvec(R):
-    Rxx, Ryx, Rzx, Rxy, Ryy, Rzy, Rxz, Ryz, Rzz = R.flat
-    K = (
-        np.array(
-            [
-                [Rxx - Ryy - Rzz, 0, 0, 0],
-                [Ryx + Rxy, Ryy - Rxx - Rzz, 0, 0],
-                [Rzx + Rxz, Rzy + Ryz, Rzz - Rxx - Ryy, 0],
-                [Ryz - Rzy, Rzx - Rxz, Rxy - Ryx, Rxx + Ryy + Rzz],
-            ]
-        )
-        / 3.0
-    )
-    eigvals, eigvecs = np.linalg.eigh(K)
-    qvec = eigvecs[[3, 0, 1, 2], np.argmax(eigvals)]
-    if qvec[0] < 0:
-        qvec *= -1
-    return qvec
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Read and write COLMAP binary and text models"
-    )
-    parser.add_argument("--input_model", help="path to input model folder")
-    parser.add_argument(
-        "--input_format",
-        choices=[".bin", ".txt"],
-        help="input model format",
-        default="",
-    )
-    parser.add_argument("--output_model", help="path to output model folder")
-    parser.add_argument(
-        "--output_format",
-        choices=[".bin", ".txt"],
-        help="output model format",
-        default=".txt",
-    )
-    args = parser.parse_args()
-
-    cameras, images, points3D = read_model(
-        path=args.input_model, ext=args.input_format
-    )
-
-    print("num_cameras:", len(cameras))
-    print("num_images:", len(images))
-    print("num_points3D:", len(points3D))
-
-    if args.output_model is not None:
-        write_model(
-            cameras,
-            images,
-            points3D,
-            path=args.output_model,
-            ext=args.output_format,
-        )
-
-
+# Example usage
 if __name__ == "__main__":
-    main()
+    # Create a COLMAP project - converts data to standardized format
+    project = COLMAPProject("door")
+    
+    # Save the processed reconstruction
+    project.save("output", format_ext=".txt")
+    

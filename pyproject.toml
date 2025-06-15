@@ -1,11 +1,10 @@
 [project]
 name = "aruco-estimator"
-version = "1.1.12"
+version = "1.2.0"
 description = ""
 authors = [
   { name = "Lukas Meyer", email = "lukas.meyer@fau.de" },
   { name = "Nile Walker", email = "nilezwalker@gmail.com" },
-  { name = "Michael Currie", email = "mcurrie@gmail.com" }
 ]
 requires-python = ">=3.9,<4.0"
 readme = "README.md"
@@ -14,32 +13,27 @@ dependencies = [
   "tqdm>=4.64.0",
   "pyquaternion==0.9.9",
   "pyransac3d==0.6.0",
-  "pycolmap>=3.11.1,<4",
   "open3d>=0.19.0,<0.20",
-  "colmap-wrapper",
   "scikit-learn>=1.3.2",
-  "pyyaml>=6.0.2,<7",
-  "addict>=2.4.0,<3",
-  "pandas>=2.0.3",
   "opencv-python>=4.10.0.84",
   "opencv-contrib-python>=4.10.0.84",
   "click>=8.1.8,<9",
-  # "pyceres==2.4",
 ]
 
 [project.scripts]
 aruco-estimator = "aruco_estimator.cli:main"
 
 [dependency-groups]
-dev = ["ruff>=0.8.4,<0.9", "ipykernel>=6.29.5,<7"]
-
+dev = [
+    "ruff>=0.8.4,<0.9",
+    "ipykernel>=6.29.5,<7",
+    "pytest>=8.4.0",
+]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.ruff]
-select = ["F403"]
-extend-select = ["I"]
+# select = ["F403"]
+# extend-select = ["I"]
 
-[tool.uv.sources]
-colmap-wrapper = { git = "https://github.com/meyerls/colmap-wrapper", rev = "f367bc2e9caf9f0f9ae2e7809834cb73849d5864" }
