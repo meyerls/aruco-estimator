@@ -1,9 +1,12 @@
 import collections
 from abc import ABC, abstractmethod
-
+from typing import Dict, Tuple
+import logging
+# from ..aruco_localizer import ArucoLocalizer
 import numpy as np
-
+import cv2
 from ..utils import qvec2rotmat, rotmat2qvec
+from ..aruco import localize_aruco_markers
 
 # Standardized data structures - all SfM software must produce these
 CameraModel = collections.namedtuple(
@@ -18,7 +21,16 @@ BaseImage = collections.namedtuple(
 Point3D = collections.namedtuple(
     "Point3D", ["id", "xyz", "rgb", "error", "image_ids", "point2D_idxs"]
 )
-
+Marker = collections.namedtuple(
+    "Marker", [
+        "id",           # ArUco marker ID (minimal)
+        "xyz",          # Center position in 3D
+        "dict_type",    # ArUco dictionary type
+        "error",        # Reconstruction error (std of edge lengths)
+        "image_ids",    # List of image IDs where detected
+        "point2D_idxs"  # List of 2D corner coordinates for each detection
+    ]
+)
 
 class Camera(BaseCamera):
     """Standardized camera class - all SfM software must produce this format."""
@@ -101,8 +113,6 @@ CAMERA_MODEL_IDS = dict(
 CAMERA_MODEL_NAMES = dict(
     [(camera_model.model_name, camera_model) for camera_model in CAMERA_MODELS]
 )
-
-
 class SfmProjectBase(ABC):
     """
     Abstract base class for Structure from Motion projects.
@@ -110,21 +120,174 @@ class SfmProjectBase(ABC):
     All SfM software implementations (COLMAP, OpenMVG, etc.) must inherit from this
     and convert their data to the standardized Camera, Image, Point3D format.
     """
-    def detect_markers(self,dict, detector):
-        pass
+    
+    def detect_markers(self, 
+                      dict_type: int = cv2.aruco.DICT_4X4_50,
+                      detector: cv2.aruco.ArucoDetector = None,
+                      detector_params: cv2.aruco.DetectorParameters = None,
+                      progress_bar: bool = True,
+                      num_processes: int = None,
+                      use_multiprocessing: bool = True) -> Dict[int, Tuple[float, np.ndarray]]:
+        """
+        Detect ArUco markers in the project images for a single dictionary type.
+        
+        :param dict_type: ArUco dictionary type to use
+        :param detector: Pre-configured ArucoDetector (if None, will be created)
+        :param detector_params: Detector parameters (if detector not provided)
+        :param progress_bar: Show progress bars
+        :param num_processes: Number of processes for multiprocessing (None = auto)
+        :param use_multiprocessing: Whether to use multiprocessing (can disable if issues occur)
+        :return: Dictionary mapping aruco_id -> (distance, corners_3d)
+        """
+        from ..aruco import localize_aruco_markers
+        
+        # Create detector if not provided
+        if detector is None:
+            if detector_params is None:
+                detector_params = cv2.aruco.DetectorParameters()
+                
+            aruco_dict = cv2.aruco.getPredefinedDictionary(dict_type)
+            detector = cv2.aruco.ArucoDetector(aruco_dict, detector_params)
+        
+        # Disable multiprocessing if requested
+        if not use_multiprocessing:
+            num_processes = 1
+        
+        # Run ArUco detection and localization
+        raw_results = localize_aruco_markers(
+            project=self,
+            dict_type=dict_type,
+            detector=detector,
+            progress_bar=progress_bar,
+            num_processes=num_processes
+        )
+        
+        # Store results in project using Marker namedtuples
+        self._store_marker_results(dict_type, raw_results)
+        
+        # Return simplified results for backward compatibility
+        results = {}
+        for aruco_id, data in raw_results.items():
+            results[aruco_id] = (data['distance'], data['corners_3d'])
+        
+        logging.info(f"ArUco detection complete. Found {len(results)} markers for dict type {dict_type}.")
+        return results
+    
+    def _store_marker_results(self, dict_type: int, raw_results: Dict):
+        """
+        Store marker results using Marker namedtuples and additional 3D corner data.
+        
+        :param dict_type: ArUco dictionary type
+        :param raw_results: Raw results from localize_aruco_markers function
+        """
+        # Initialize storage if needed
+        if not hasattr(self, '_markers'):
+            self._markers = {}
+        if not hasattr(self, '_marker_corners_3d'):
+            self._marker_corners_3d = {}
+            
+        # Initialize for this dictionary type
+        if dict_type not in self._markers:
+            self._markers[dict_type] = {}
+        if dict_type not in self._marker_corners_3d:
+            self._marker_corners_3d[dict_type] = {}
+        
+        for aruco_id, data in raw_results.items():
+            # Create Marker namedtuple
+            marker = Marker(
+                id=aruco_id,
+                xyz=data['center_xyz'],
+                dict_type=dict_type,
+                error=data['error'],
+                image_ids=data['image_ids'],
+                point2D_idxs=data['corner_pixels']
+            )
+            
+            self._markers[dict_type][aruco_id] = marker
+            self._marker_corners_3d[dict_type][aruco_id] = data['corners_3d']
+            
+            logging.info(f"Stored marker dict={dict_type}, id={aruco_id}")
+    
+    def get_markers(self, dict_type: int = None, aruco_id: int = None):
+        """
+        Get stored markers from the project.
+        
+        :param dict_type: Optional dictionary type filter
+        :param aruco_id: Optional specific ArUco ID filter
+        :return: Marker namedtuple(s)
+        """
+        if not hasattr(self, '_markers') or not self._markers:
+            return {} if dict_type is None else (None if aruco_id is not None else {})
+            
+        if dict_type is not None:
+            dict_markers = self._markers.get(dict_type, {})
+            if aruco_id is not None:
+                return dict_markers.get(aruco_id, None)
+            return dict_markers
+        else:
+            return self._markers
+    
+    def get_marker_corners_3d(self, dict_type: int, aruco_id: int) -> np.ndarray:
+        """
+        Get 3D corners for a specific marker.
+        
+        :param dict_type: ArUco dictionary type
+        :param aruco_id: ArUco marker ID
+        :return: 4x3 array of corner positions
+        """
+        if (not hasattr(self, '_marker_corners_3d') or 
+            dict_type not in self._marker_corners_3d or 
+            aruco_id not in self._marker_corners_3d[dict_type]):
+            raise ValueError(f"Marker dict={dict_type}, id={aruco_id} not found or has no 3D corners")
+        return self._marker_corners_3d[dict_type][aruco_id]
+    
+    def get_marker_distance(self, dict_type: int, aruco_id: int) -> float:
+        """
+        Get average edge distance for a specific marker.
+        
+        :param dict_type: ArUco dictionary type
+        :param aruco_id: ArUco marker ID
+        :return: Average distance between adjacent corners
+        """
+        from .aruco_detection import calculate_marker_distance
+        corners_3d = self.get_marker_corners_3d(dict_type, aruco_id)
+        return calculate_marker_distance(corners_3d)
+    
     def __init__(self, project_path):
         self._project_path = project_path
         self._cameras = {}
         self._images = {}
         self._points3D = {}
+        self._markers = {}  # Structure: {dict_type: {aruco_id: Marker}}
+        self._marker_corners_3d = {}  # Structure: {dict_type: {aruco_id: corners_3d}}
         self._load_data()
         self._verify_data_loaded()
         
-        # self._detected_tags = dict()
+    def clear_markers(self, dict_type: int = None):
+        """
+        Clear stored markers.
+        
+        :param dict_type: Optional specific dictionary type to clear (if None, clears all)
+        """
+        if not hasattr(self, '_markers'):
+            return
+            
+        if dict_type is not None:
+            if dict_type in self._markers:
+                del self._markers[dict_type]
+            if hasattr(self, '_marker_corners_3d') and dict_type in self._marker_corners_3d:
+                del self._marker_corners_3d[dict_type]
+            logging.info(f"Cleared markers for dict type {dict_type}")
+        else:
+            self._markers = {}
+            self._marker_corners_3d = {}
+            logging.info("Cleared all markers")
+
     @abstractmethod
-    def load_image_by_id(self,image_id):
+    def load_image_by_id(self, image_id):
         # return opencv image
         pass
+        
     @abstractmethod
     def _load_data(self):
         """Load project data from files."""
@@ -141,15 +304,38 @@ class SfmProjectBase(ABC):
         """Save project data to files."""
         pass
     
-
     def transform(self, transform_matrix):
-        """Apply 4x4 transformation matrix to poses and 3D points."""
+        """Apply 4x4 transformation matrix to poses, 3D points, and markers."""
         if transform_matrix.shape != (4, 4):
             raise ValueError("Transform matrix must be 4x4")
         
+        # Transform markers
+        if hasattr(self, '_markers') and hasattr(self, '_marker_corners_3d'):
+            for dict_type in self._markers:
+                for aruco_id in self._markers[dict_type]:
+                    marker = self._markers[dict_type][aruco_id]
+                    
+                    if dict_type in self._marker_corners_3d and aruco_id in self._marker_corners_3d[dict_type]:
+                        # Transform 3D corners
+                        corners_3d = self._marker_corners_3d[dict_type][aruco_id]
+                        transformed_corners = []
+                        for corner in corners_3d:
+                            corner_h = np.append(corner, 1)
+                            transformed_h = transform_matrix @ corner_h
+                            transformed_corners.append(transformed_h[:3])
+                        
+                        self._marker_corners_3d[dict_type][aruco_id] = np.array(transformed_corners)
+                        
+                        # Transform center position and update marker
+                        center_h = np.append(marker.xyz, 1)
+                        transformed_center_h = transform_matrix @ center_h
+                        new_center = transformed_center_h[:3]
+                        
+                        # Create new marker with transformed center
+                        self._markers[dict_type][aruco_id] = marker._replace(xyz=new_center)
+        
         # Transform camera poses
         for img_id, img in self._images.items():
-          
             # Apply transformation: new_c2w = transform * old_c2w
             new_c2w = transform_matrix @ img.world_extrinsics
             
@@ -169,8 +355,8 @@ class SfmProjectBase(ABC):
             new_xyz = transformed_h[:3]
             self._points3D[pt_id] = pt._replace(xyz=new_xyz)
         
+        logging.info("Applied transformation to poses, 3D points, and markers")
 
-   
     @property
     def cameras(self):
         return self._cameras
@@ -183,3 +369,9 @@ class SfmProjectBase(ABC):
     def points3D(self):
         return self._points3D
     
+    @property
+    def markers(self):
+        """Get all markers as Marker namedtuples."""
+        if not hasattr(self, '_markers'):
+            return {}
+        return self._markers

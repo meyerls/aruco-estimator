@@ -3,6 +3,9 @@ import click
 import cv2
 
 from aruco_estimator.tools.register import register
+import logging
+from copy import deepcopy
+from pathlib import Path
 
 
 @click.group()
@@ -10,12 +13,11 @@ def main():
     """ArUco Estimator CLI tool."""
     pass
 
-
 @main.command('register')
 @click.argument('project', type=click.Path(exists=True))
 @click.option('--aruco-size', type=float, default=0.2,
               help='Size of the aruco marker in meter.')
-@click.option('--dict-type', type=int, default=cv2.aruco.DICT_4X4_50,
+@click.option('--dict-type', type=int, default=cv2.aruco.DICT_5X5_50,
               help='ArUco dictionary type (e.g. cv2.aruco.DICT_4X4_50)')
 @click.option('--show-original', is_flag=True,
               help='Show original points and cameras in visualization')
@@ -30,8 +32,14 @@ def main():
 def register_cmd(project, aruco_size, dict_type, show_original, show, 
                         target_id, export_tags, export_path):
     """Normalize COLMAP poses relative to ArUco marker."""
+    from aruco_estimator.sfm.colmap import COLMAPProject
+    logging.basicConfig(level=logging.INFO)
+    # Load COLMAP project using new interface
+    logging.info("Loading COLMAP project...")
+    
+    c_project = COLMAPProject(Path(project))
     register(
-        project=project,
+        project=c_project,
         aruco_size=aruco_size,
         dict_type=dict_type,
         show_original=show_original,
@@ -45,7 +53,7 @@ def register_cmd(project, aruco_size, dict_type, show_original, show,
 @click.argument('project', type=click.Path(exists=True))
 @click.option('--aruco-size', type=float, default=0.2,
               help='Size of the aruco marker in meter.')
-@click.option('--dict-type', type=int, default=cv2.aruco.DICT_4X4_50,
+@click.option('--dict-type', type=int, default=cv2.aruco.DICT_5X5_50,
               help='ArUco dictionary type (e.g. cv2.aruco.DICT_4X4_50)')
 @click.option('--show-original', is_flag=True,
               help='Show original points and cameras in visualization')
