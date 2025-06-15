@@ -56,20 +56,6 @@ def detect_aruco_markers_in_image(
     return corners, aruco_ids, image_size
 
 
-def calculate_marker_distance(corners_3d: np.ndarray) -> float:
-    """
-    Calculate average edge distance for ArUco marker corners.
-    
-    :param corners_3d: 4x3 array of corner positions
-    :return: Average distance between adjacent corners
-    """
-    dist1 = np.linalg.norm(corners_3d[0] - corners_3d[1])
-    dist2 = np.linalg.norm(corners_3d[1] - corners_3d[2])
-    dist3 = np.linalg.norm(corners_3d[2] - corners_3d[3])
-    dist4 = np.linalg.norm(corners_3d[3] - corners_3d[0])
-    return np.mean([dist1, dist2, dist3, dist4])
-
-
 def localize_aruco_markers(
     project, 
     dict_type: int,
@@ -130,8 +116,6 @@ def _detect_markers_in_project(
     for image_id in tqdm(image_ids, desc=f"Loading images for dict {dict_type}", 
                         disable=not progress_bar):
         image = project.load_image_by_id(image_id)
-        if len(image.shape) == 3:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         images.append(image)
 
     # Try multiprocessing if num_processes > 1, fall back to sequential if it fails
@@ -224,50 +208,6 @@ def _detect_markers_sequential(images, detector, dict_type, progress_bar):
             results.append((corners, aruco_ids, image_size))
     return results
 
-    # Process detection results
-    detection_data = {}
-    detected_ids = []
-    
-    for image_idx, image_id in enumerate(image_ids):
-        image = project.images[image_id]
-        camera = project.cameras[image.camera_id]
-        result = results[image_idx]
-        
-        # Calculate scaling ratios
-        ratio_x = camera.width / result[2][1]
-        ratio_y = camera.height / result[2][0]
-        
-        detection_data[image_id] = {
-            'aruco_corners': [],
-            'aruco_ids': [],
-            'corner_pixels': []  # Store original pixel coordinates
-        }
-        
-        if result[0] is not None and result[1] is not None:
-            for corner_set, marker_id in zip(result[0], result[1]):
-                # Scale corners to camera resolution
-                scaled_corners = (
-                    np.expand_dims(
-                        np.vstack([
-                            corner_set[0, :, 0] * ratio_y,
-                            corner_set[0, :, 1] * ratio_x,
-                        ]).T,
-                        axis=0,
-                    ),
-                )
-                
-                detection_data[image_id]['aruco_corners'].append(scaled_corners)
-                detection_data[image_id]['aruco_ids'].append(marker_id[0])
-                detection_data[image_id]['corner_pixels'].append(corner_set[0])
-                detected_ids.append(marker_id[0])
-
-    unique_ids = list(set(detected_ids))
-    if unique_ids:
-        logging.info(f"Dict {dict_type}: Detected ArUco IDs: {sorted(unique_ids)}")
-    else:
-        logging.warning(f"Dict {dict_type}: No ArUco markers detected")
-    
-    return detection_data
 
 
 def _calculate_3d_positions(project, dict_type: int, detection_data: Dict) -> Dict:
@@ -325,21 +265,11 @@ def _calculate_3d_positions(project, dict_type: int, detection_data: Dict) -> Di
 
             if len(P0_reshaped) > 0 and len(N_reshaped) > 0:
                 corners_3d = intersect_parallelized(P0=P0_reshaped, N=N_reshaped)
-                distance = calculate_marker_distance(corners_3d)
                 center_xyz = np.mean(corners_3d, axis=0)
-                
-                # Calculate reconstruction error (variance in distances)
-                distances = [
-                    np.linalg.norm(corners_3d[i] - corners_3d[(i+1)%4])
-                    for i in range(4)
-                ]
-                error = np.std(distances)
                 
                 marker_results[aruco_id] = {
                     'corners_3d': corners_3d,
                     'center_xyz': center_xyz,
-                    'distance': distance,
-                    'error': error,
                     'detection_count': len(P0_reshaped),
                     'image_ids': data['image_ids'],
                     'corner_pixels': data['corner_pixels'],
@@ -347,7 +277,7 @@ def _calculate_3d_positions(project, dict_type: int, detection_data: Dict) -> Di
                 }
                 
                 logging.info(f"Dict {dict_type}, ID {aruco_id}: "
-                           f"distance={distance:.3f}, error={error:.4f}, "
+                            # f"error={error:.4f}, "
                            f"detections={len(P0_reshaped)}")
 
     return marker_results

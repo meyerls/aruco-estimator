@@ -60,26 +60,41 @@ aruco-estimator register ./door --target-id 7 --show
 ### Scripting
 
 ``` python 
+ """Normalize COLMAP poses relative to ArUco marker."""
 from aruco_estimator.sfm.colmap import COLMAPProject
-project_path = Path(project)
+logging.basicConfig(level=logging.INFO)
 
-# Load COLMAP project using new interface
-logging.info("Loading COLMAP project...")
-project = COLMAPProject(str(project_path))
+# Run ArUco detection with proper dictionary type
+logging.info(f"Detecting ArUco markers using {dict_type}x{dict_type} dictionary...")
+
+# Pass the dict_type parameter to detect_markers
+aruco_results = project.detect_markers(dict_type=cv_dict_type)
+
+if not aruco_results:
+    logging.warning("No ArUco markers detected!")
+    return
+# Check if target marker was found
+if target_id not in aruco_results:
+    available_ids = list(aruco_results.keys())
+    logging.warning(f"Target marker ID {target_id} not found. Available IDs: {available_ids}")
+    return
+
+# Get 3D corners for normalization
+target_corners_3d = aruco_results[target_id]
+# logging.info(f"Using marker {target_id} for normalization (distance: {target_distance:.3f})")
+print(target_corners_3d) 
+# Calculate normalization transform with scaling
+transform = get_normalization_transform(target_corners_3d, aruco_size)
 
 # Store original project state if needed for visualization
 original_project = None
 if show_original:
     original_project = deepcopy(project)
 
-# Run ArUco detection
-logging.info("Detecting ArUco markers...")
-aruco_localizer = ArucoLocalizer(
-    project=project,
-    dict_type=dict_type,
-    target_id=target_id,
-)
-aruco_distance, aruco_corners_3d = aruco_localizer.run()
+# Apply normalization to the project
+logging.info("Normalizing poses and 3D points...")
+project.transform(transform)
+
 logging.info(f"Target ArUco ID: {target_id}")
 logging.info(f"ArUco 3d points: {aruco_corners_3d}")
 logging.info(f"ArUco marker distance: {aruco_distance}")

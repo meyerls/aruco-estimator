@@ -52,8 +52,6 @@ class VisualizationModel:
         """Add 3D points from a project with given configuration."""
         # Default configuration
         default_config = {
-            "min_track_len": 3,
-            "remove_statistical_outlier": True,
             "color": None
         }
         default_config.update(config)
@@ -63,9 +61,6 @@ class VisualizationModel:
         xyz = []
         rgb = []
         for point3D in project.points3D.values():
-            track_len = len(point3D.point2D_idxs)
-            if track_len < default_config["min_track_len"]:
-                continue
             xyz.append(point3D.xyz)
             if default_config["color"] is None:
                 rgb.append(point3D.rgb / 255)
@@ -76,11 +71,7 @@ class VisualizationModel:
         else:
             pcd.colors = o3d.utility.Vector3dVector(rgb)
 
-        # Remove obvious outliers
-        if default_config["remove_statistical_outlier"]:
-            [pcd, _] = pcd.remove_statistical_outlier(
-                nb_neighbors=20, std_ratio=2.0
-            )
+       
 
         self.__vis.add_geometry(pcd)
         self.__vis.poll_events()
@@ -101,7 +92,6 @@ class VisualizationModel:
             # Get camera parameters
             cam = project.cameras[img.camera_id]
             
-            # Get extrinsics matrix (camera-to-world)
             extrinsics = img.world_extrinsics
             
             # Get intrinsics matrix

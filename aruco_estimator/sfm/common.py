@@ -26,7 +26,6 @@ Marker = collections.namedtuple(
         "id",           # ArUco marker ID (minimal)
         "xyz",          # Center position in 3D
         "dict_type",    # ArUco dictionary type
-        "error",        # Reconstruction error (std of edge lengths)
         "image_ids",    # List of image IDs where detected
         "point2D_idxs"  # List of 2D corner coordinates for each detection
     ]
@@ -139,7 +138,6 @@ class SfmProjectBase(ABC):
         :param use_multiprocessing: Whether to use multiprocessing (can disable if issues occur)
         :return: Dictionary mapping aruco_id -> (distance, corners_3d)
         """
-        from ..aruco import localize_aruco_markers
         
         # Create detector if not provided
         if detector is None:
@@ -168,7 +166,7 @@ class SfmProjectBase(ABC):
         # Return simplified results for backward compatibility
         results = {}
         for aruco_id, data in raw_results.items():
-            results[aruco_id] = (data['distance'], data['corners_3d'])
+            results[aruco_id] = data['corners_3d']
         
         logging.info(f"ArUco detection complete. Found {len(results)} markers for dict type {dict_type}.")
         return results
@@ -198,7 +196,7 @@ class SfmProjectBase(ABC):
                 id=aruco_id,
                 xyz=data['center_xyz'],
                 dict_type=dict_type,
-                error=data['error'],
+                # error=data['error'],
                 image_ids=data['image_ids'],
                 point2D_idxs=data['corner_pixels']
             )

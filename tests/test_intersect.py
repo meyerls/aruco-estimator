@@ -2,7 +2,6 @@ import numpy as np
 
 from aruco_estimator.opt import (
     ls_intersection_of_lines,
-    ls_intersection_of_lines_parallelized,
 )
 
 P0 = np.array([[-0.66467896, -0.12612974, 0.18842651],
@@ -93,6 +92,3 @@ def test_intersection():
     ret = ls_intersection_of_lines(P0, N)
     np.testing.assert_array_almost_equal(ret, true_value)
 
-def test_intersection_parallelized():
-    ret = ls_intersection_of_lines_parallelized(P0, N)
-    np.testing.assert_array_almost_equal(ret, true_value)

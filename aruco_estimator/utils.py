@@ -7,7 +7,7 @@ See LICENSE file for more information.
 import logging
 from typing import Tuple
 import numpy as np
-
+from .opt import kabsch_umeyama
 
 def qvec2rotmat(qvec):
     return np.array(
@@ -91,66 +91,6 @@ def get_normalization_transform(
     
     return transform
 
-def ray_cast_aruco_corners(
-    extrinsics: np.ndarray, intrinsics: np.ndarray, corners: tuple
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    n = x @ K^-1 @ R.T
-
-    :param extrinsics:
-    :param intrinsics:
-    :param corners:
-    :return:
-    """
-    R, camera_origin = extrinsics[:3, :3], extrinsics[:3, 3]
-    aruco_corners = np.concatenate((corners[0][0], np.ones((4, 1))), axis=1)
-    rays = aruco_corners @ np.linalg.inv(intrinsics).T @ R.T
-    rays_norm = rays / np.linalg.norm(rays, ord=2, axis=1, keepdims=True)
-
-    return camera_origin, rays_norm
-
-def kabsch_umeyama(pointset_A, pointset_B):
-    """
-    Kabsch–Umeyama algorithm exactly as described in the source:
-    https://zpl.fi/aligning-point-patterns-with-kabsch-umeyama-algorithm/
-    
-    Finds transformation from B to A: A ≈ t + c * R @ B
-    """
-    assert pointset_A.shape == pointset_B.shape
-    n, m = pointset_A.shape
-
-    # Find centroids (μ_A, μ_B in the source)
-    EA = np.mean(pointset_A, axis=0)
-    EB = np.mean(pointset_B, axis=0)
-    
-    # Variance of A (σ_A² in the source)
-    VarA = np.mean(np.linalg.norm(pointset_A - EA, axis=1) ** 2)
-
-    # Cross-covariance matrix H
-    H = ((pointset_A - EA).T @ (pointset_B - EB)) / n
-    
-    # SVD: H = U @ D @ VT
-    U, D, VT = np.linalg.svd(H)
-    
-    # Detect reflection
-    d = np.sign(np.linalg.det(U) * np.linalg.det(VT))
-    S = np.diag([1] * (m - 1) + [d])
-
-    # Rotation matrix
-    R = U @ S @ VT
-    
-    # Scaling factor - properly handle D (1D array) and S (2D matrix)
-    # np.trace(np.diag(D) @ S) = sum of diagonal elements of diag(D) @ S
-    # Since both are diagonal matrices, this is sum(D * diag(S))
-    S_diag = np.diag(S)  # Extract diagonal: [1, 1, ..., 1, d]
-    c = VarA / np.sum(D * S_diag)
-    
-    # Translation vector
-    t = EA - c * R @ EB
-
-    return R, c, t
-
-
 def get_transformation_matrix_4x4(R, c, t):
     """
     Convert Kabsch-Umeyama results to a 4x4 transformation matrix
@@ -160,18 +100,4 @@ def get_transformation_matrix_4x4(R, c, t):
     T[:3, 3] = t
     return T
 
-
-def apply_transformation(points, R, c, t):
-    """Apply transformation to points: t + c * R @ points"""
-    return t + (c * R @ points.T).T
-
-
-def apply_transformation_4x4(points, T):
-    """Apply 4x4 transformation matrix to points"""
-    # Convert to homogeneous coordinates
-    points_homo = np.column_stack([points, np.ones(points.shape[0])])
-    # Apply transformation
-    transformed_homo = (T @ points_homo.T).T
-    # Convert back to 3D coordinates
-    return transformed_homo[:, :3]
 

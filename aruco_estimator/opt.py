@@ -7,7 +7,7 @@ See LICENSE file for more information.
 import numpy as np
 
 
-def intersect(P0: np.ndarray, N: np.ndarray, solve='pseudo') -> np.ndarray:
+def intersect(P0: np.ndarray, N: np.ndarray, solve='ls') -> np.ndarray:
     '''
     Least Squares Intersection of Lines: https://silo.tips/download/least-squares-intersection-of-lines#modals
 
@@ -75,7 +75,43 @@ def intersect_parallelized(P0: np.ndarray, N: np.ndarray) -> np.ndarray:
     return p[..., 0]
 
 
-def ls_intersection_of_lines_parallelized(P0: np.ndarray, N: np.ndarray) -> np.ndarray:
-    intersctions_3d = intersect_parallelized(P0, N)
+def kabsch_umeyama(pointset_A, pointset_B):
+    """
+    Kabsch–Umeyama algorithm exactly as described in the source:
+    https://zpl.fi/aligning-point-patterns-with-kabsch-umeyama-algorithm/
+    
+    Finds transformation from B to A: A ≈ t + c * R @ B
+    """
+    assert pointset_A.shape == pointset_B.shape
+    n, m = pointset_A.shape
 
-    return intersctions_3d[..., 0]
+    # Find centroids (μ_A, μ_B in the source)
+    EA = np.mean(pointset_A, axis=0)
+    EB = np.mean(pointset_B, axis=0)
+    
+    # Variance of A (σ_A² in the source)
+    VarA = np.mean(np.linalg.norm(pointset_A - EA, axis=1) ** 2)
+
+    # Cross-covariance matrix H
+    H = ((pointset_A - EA).T @ (pointset_B - EB)) / n
+    
+    # SVD: H = U @ D @ VT
+    U, D, VT = np.linalg.svd(H)
+    
+    # Detect reflection
+    d = np.sign(np.linalg.det(U) * np.linalg.det(VT))
+    S = np.diag([1] * (m - 1) + [d])
+
+    # Rotation matrix
+    R = U @ S @ VT
+    
+    # Scaling factor - properly handle D (1D array) and S (2D matrix)
+    # np.trace(np.diag(D) @ S) = sum of diagonal elements of diag(D) @ S
+    # Since both are diagonal matrices, this is sum(D * diag(S))
+    S_diag = np.diag(S)  # Extract diagonal: [1, 1, ..., 1, d]
+    c = VarA / np.sum(D * S_diag)
+    
+    # Translation vector
+    t = EA - c * R @ EB
+
+    return R, c, t

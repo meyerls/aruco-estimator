@@ -1,7 +1,23 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-from aruco_estimator.utils import kabsch_umeyama,get_transformation_matrix_4x4, apply_transformation,apply_transformation_4x4
+from aruco_estimator.opt import kabsch_umeyama
+from aruco_estimator.utils import get_transformation_matrix_4x4
+
+def apply_transformation(points, R, c, t):
+    """Apply transformation to points: t + c * R @ points"""
+    return t + (c * R @ points.T).T
+
+
+def apply_transformation_4x4(points, T):
+    """Apply 4x4 transformation matrix to points"""
+    # Convert to homogeneous coordinates
+    points_homo = np.column_stack([points, np.ones(points.shape[0])])
+    # Apply transformation
+    transformed_homo = (T @ points_homo.T).T
+    # Convert back to 3D coordinates
+    return transformed_homo[:, :3]
+
 
 def test_identical_point_sets():
     """Test with identical point sets - should give identity transformation"""
