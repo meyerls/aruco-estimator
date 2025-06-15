@@ -109,20 +109,6 @@ pip uninstall opencv-python opencv-python-headless
 pip install opencv-python opencv-contrib-python
 ```
 
-### ExifTool Installation
-
-This project uses [PyExifTool](https://github.com/sylikc/pyexiftool) to communicate with [ExifTool](https://exiftool.org). If you encounter installation issues:
-
-**Ubuntu/Debian:**
-```bash
-wget https://exiftool.org/Image-ExifTool-12.51.tar.gz
-gzip -dc Image-ExifTool-12.51.tar.gz | tar -xf -
-cd Image-ExifTool-12.51
-perl Makefile.PL
-make test
-sudo make install
-```
-
 ## Acknowledgements
 
 - Code for reading binary COLMAP data is partly borrowed from [COLMAP Utility Scripts](https://github.com/uzh-rpg/colmap_utils) by [uzh-rpg](https://github.com/uzh-rpg)
