@@ -11,8 +11,7 @@
 
 ## About
 
-This project automatically computes the correct scale and registration of 3D reconstructions generated with [COLMAP](https://colmap.github.io/) by placing one or more ArUco markers in the scene.
-
+This project automatically computes the correct scale and registration of 3D reconstructions generated with [COLMAP](https://colmap.github.io/) by placing one or more ArUco markers in the scene. This module does not perform the reconstruction task itself so a colmap installation isn't needed.
 ## Installation
 
 This repository is tested on Python 3.6+ and can be installed from PyPI:
