@@ -56,6 +56,162 @@ def detect_aruco_markers_in_image(
     return corners, aruco_ids, image_size
 
 
+def _debug_visualize_rays(ray_data: Dict, marker_results: Dict):
+    """
+    DEBUG: Visualize rays and intersections for debugging marker localization.
+    This is a temporary debug feature - remove when done debugging.
+    """
+    try:
+        import open3d as o3d
+        
+        print("=== DEBUG: Launching ray visualization ===")
+        
+        vis = o3d.visualization.Visualizer()
+        vis.create_window(window_name="ArUco Ray Debug", width=1200, height=800)
+        
+        # Color scheme for different markers
+        marker_colors = [
+            [1, 0, 0],      # Red
+            [0, 1, 0],      # Green  
+            [0, 0, 1],      # Blue
+            [1, 1, 0],      # Yellow
+            [1, 0, 1],      # Magenta
+            [0, 1, 1],      # Cyan
+            [0.8, 0.4, 0],  # Orange
+            [0.5, 0, 0.5],  # Purple
+        ]
+        
+        for marker_idx, (aruco_id, data) in enumerate(ray_data.items()):
+            if len(data['P0']) == 0:
+                continue
+                
+            color = marker_colors[marker_idx % len(marker_colors)]
+            print(f"Visualizing marker {aruco_id} with {len(data['P0'])} detections")
+            
+            # Convert to numpy arrays
+            P0_array = np.array(data['P0'])  # Camera centers
+            N_array = np.array(data['N'])    # Ray directions per corner
+            
+            # Visualize camera centers
+            camera_centers = o3d.geometry.PointCloud()
+            camera_centers.points = o3d.utility.Vector3dVector(P0_array)
+            camera_centers.colors = o3d.utility.Vector3dVector([color] * len(P0_array))
+            vis.add_geometry(camera_centers)
+            
+            # Visualize rays from each camera to each corner - extended in both directions
+            # Color-code by corner: corner 0=red, 1=green, 2=blue, 3=yellow
+            corner_colors = [
+                [1.0, 0.3, 0.3],    # Corner 0: Red
+                [0.3, 1.0, 0.3],    # Corner 1: Green  
+                [0.3, 0.3, 1.0],    # Corner 2: Blue
+                [1.0, 1.0, 0.3],    # Corner 3: Yellow
+            ]
+            
+            # Modify base colors for this marker to distinguish markers
+            marker_corner_colors = []
+            for corner_color in corner_colors:
+                # Blend with marker base color to keep markers distinguishable
+                blended_color = [
+                    0.7 * corner_color[i] + 0.3 * color[i] for i in range(3)
+                ]
+                marker_corner_colors.append(blended_color)
+            
+            ray_length = 40.0  # Much longer rays to see convergence patterns
+            
+            # Create separate line sets for each corner to have different colors
+            for corner_idx in range(4):
+                corner_ray_points = []
+                corner_ray_lines = []
+                line_idx = 0
+                
+                for cam_idx, (camera_center, corner_rays) in enumerate(zip(P0_array, N_array)):
+                    if corner_idx < len(corner_rays):  # Safety check
+                        ray_direction = corner_rays[corner_idx]
+                        
+                        # Create ray line extending in BOTH directions from camera center
+                        ray_start = camera_center - ray_direction * ray_length  # Behind camera
+                        ray_end = camera_center + ray_direction * ray_length    # In front of camera
+                        
+                        corner_ray_points.extend([ray_start, ray_end])
+                        corner_ray_lines.append([line_idx, line_idx + 1])
+                        line_idx += 2
+                
+                if corner_ray_points:
+                    # Create line set for this corner
+                    corner_lines = o3d.geometry.LineSet()
+                    corner_lines.points = o3d.utility.Vector3dVector(corner_ray_points)
+                    corner_lines.lines = o3d.utility.Vector2iVector(corner_ray_lines)
+                    corner_lines.colors = o3d.utility.Vector3dVector(
+                        [marker_corner_colors[corner_idx]] * len(corner_ray_lines)
+                    )
+                    vis.add_geometry(corner_lines)
+            
+            # Visualize calculated 3D corners (if available) - color-coded by corner
+            if aruco_id in marker_results:
+                corners_3d = marker_results[aruco_id]['corners_3d']
+                center_xyz = marker_results[aruco_id]['center_xyz']
+                
+                # Corner points - each with its corresponding corner color
+                for corner_idx, corner_3d in enumerate(corners_3d):
+                    corner_point = o3d.geometry.PointCloud()
+                    corner_point.points = o3d.utility.Vector3dVector([corner_3d])
+                    corner_point.colors = o3d.utility.Vector3dVector([marker_corner_colors[corner_idx]])
+                    vis.add_geometry(corner_point)
+                    
+                    # Add small sphere for better visibility
+                    corner_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.03)
+                    corner_sphere.translate(corner_3d)
+                    corner_sphere.paint_uniform_color(marker_corner_colors[corner_idx])
+                    vis.add_geometry(corner_sphere)
+                
+                # Marker center
+                center_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.05)
+                center_sphere.translate(center_xyz)
+                center_sphere.paint_uniform_color(color)
+                vis.add_geometry(center_sphere)
+                
+                # Connect corners to form marker outline - using marker base color
+                corner_lines = o3d.geometry.LineSet()
+                corner_lines.points = o3d.utility.Vector3dVector(corners_3d)
+                corner_lines.lines = o3d.utility.Vector2iVector([[0,1], [1,2], [2,3], [3,0]])
+                corner_lines.colors = o3d.utility.Vector3dVector([color] * 4)
+                vis.add_geometry(corner_lines)
+                
+                print(f"  Marker {aruco_id}: center at {center_xyz}")
+                print(f"  Corner spread: {np.std(corners_3d, axis=0)}")
+                print(f"  Corner 0 (RED): {corners_3d[0]}")
+                print(f"  Corner 1 (GREEN): {corners_3d[1]}")
+                print(f"  Corner 2 (BLUE): {corners_3d[2]}")
+                print(f"  Corner 3 (YELLOW): {corners_3d[3]}")
+        
+        # Add coordinate frame for reference
+        coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5)
+        vis.add_geometry(coord_frame)
+        
+        print("Controls:")
+        print("  - Mouse: Rotate view")
+        print("  - Ctrl+Mouse: Pan")
+        print("  - Scroll: Zoom")
+        print("  - Close window to continue")
+        print("")
+        print("Color Legend:")
+        print("  🔴 RED lines/points = Corner 0")
+        print("  🟢 GREEN lines/points = Corner 1") 
+        print("  🔵 BLUE lines/points = Corner 2")
+        print("  🟡 YELLOW lines/points = Corner 3")
+        print("  Each marker has a different base color blend")
+        
+        vis.run()
+        vis.destroy_window()
+        
+        print("=== DEBUG: Visualization closed ===")
+        
+    except ImportError:
+        print("DEBUG: Open3D not available, skipping visualization")
+    except Exception as e:
+        print(f"DEBUG: Visualization failed: {e}")
+
+
 def localize_aruco_markers(
     project, 
     dict_type: int,
@@ -270,14 +426,21 @@ def _calculate_3d_positions(project, dict_type: int, detection_data: Dict) -> Di
                 marker_results[aruco_id] = {
                     'corners_3d': corners_3d,
                     'center_xyz': center_xyz,
-                    'detection_count': len(P0_reshaped),
                     'image_ids': data['image_ids'],
                     'corner_pixels': data['corner_pixels'],
                     'dict_type': dict_type
                 }
                 
                 logging.info(f"Dict {dict_type}, ID {aruco_id}: "
-                            # f"error={error:.4f}, "
                            f"detections={len(P0_reshaped)}")
 
+    # # DEBUG: Visualize rays and intersections
+    # print(f"\n=== DEBUG INFO for dict {dict_type} ===")
+    # print(f"Found {len(all_ids)} unique marker IDs: {sorted(all_ids)}")
+    # for aruco_id, data in ray_data.items():
+    #     print(f"Marker {aruco_id}: {len(data['P0'])} camera detections")
+    
+    # if ray_data and any(len(data['P0']) > 0 for data in ray_data.values()):
+    #     _debug_visualize_rays(ray_data, marker_results)
+    
     return marker_results

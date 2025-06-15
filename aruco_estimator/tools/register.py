@@ -8,7 +8,7 @@ from aruco_estimator.visualization import VisualizationModel
 import json
 import os
 import numpy as np
-
+#TODO move to cli.py
 def get_dict_type(dict_size: int) -> int:
     """
     Map dictionary size number to OpenCV ArUco dictionary constant.

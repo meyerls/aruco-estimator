@@ -43,7 +43,8 @@ unzip door.zip
 Test the registration functionality with the example project:
 
 ```bash
-aruco-estimator register ./door --target-id 7 --show
+aruco-estimator register ./door --target-id 7 --dict-type 4 --show --aruco-size 0.15
+
 ```
 
 <p align="center" width="100%">
@@ -54,50 +55,31 @@ aruco-estimator register ./door --target-id 7 --show
     <img width="100%" src="assets/output.gif?raw=true">
 </p>
 
-### Merging by Tag
- blah
-
 ### Scripting
 
 ``` python 
- """Normalize COLMAP poses relative to ArUco marker."""
 from aruco_estimator.sfm.colmap import COLMAPProject
-logging.basicConfig(level=logging.INFO)
+from aruco_estimator.utils import get_normalization_transform
+import cv2
+project = COLMAPProject('./door')
 
-# Run ArUco detection with proper dictionary type
-logging.info(f"Detecting ArUco markers using {dict_type}x{dict_type} dictionary...")
-
-# Pass the dict_type parameter to detect_markers
-aruco_results = project.detect_markers(dict_type=cv_dict_type)
-
-if not aruco_results:
-    logging.warning("No ArUco markers detected!")
-    return
-# Check if target marker was found
-if target_id not in aruco_results:
-    available_ids = list(aruco_results.keys())
-    logging.warning(f"Target marker ID {target_id} not found. Available IDs: {available_ids}")
-    return
+target_id = 7
+aruco_size = .15
+aruco_results = project.detect_markers(dict_type=cv2.aruco.DICT_4X4_50)
 
 # Get 3D corners for normalization
 target_corners_3d = aruco_results[target_id]
-# logging.info(f"Using marker {target_id} for normalization (distance: {target_distance:.3f})")
 print(target_corners_3d) 
-# Calculate normalization transform with scaling
+
+# Calculate 4x4 transform with scaling so tag is at the origin 
 transform = get_normalization_transform(target_corners_3d, aruco_size)
 
-# Store original project state if needed for visualization
-original_project = None
-if show_original:
-    original_project = deepcopy(project)
-
 # Apply normalization to the project
-logging.info("Normalizing poses and 3D points...")
+print("Normalizing poses and 3D points...")
 project.transform(transform)
+project.save("./transformed_output/")
 
-logging.info(f"Target ArUco ID: {target_id}")
-logging.info(f"ArUco 3d points: {aruco_corners_3d}")
-logging.info(f"ArUco marker distance: {aruco_distance}")
+print(f"Target ArUco ID: {target_id}")
 ```
 
 ## Known Limitations 
@@ -109,7 +91,6 @@ logging.info(f"ArUco marker distance: {aruco_distance}")
 - Only COLMAP .bin and .txt models are supported
 
 ## Roadmap
-- [x] Replace get_normalization_transform with kabsch_umeyama
 - [ ] Project base should own localizer
 - [ ] Implement the merge by tag tool 
 - [ ] Support for additional camera models

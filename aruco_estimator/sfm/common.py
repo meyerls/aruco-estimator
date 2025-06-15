@@ -23,8 +23,9 @@ Point3D = collections.namedtuple(
 )
 Marker = collections.namedtuple(
     "Marker", [
-        "id",           # ArUco marker ID (minimal)
+        "id",           # ArUco marker ID
         "xyz",          # Center position in 3D
+        "corners_3d",   # 4x3 array of corner positions in 3D
         "dict_type",    # ArUco dictionary type
         "image_ids",    # List of image IDs where detected
         "point2D_idxs"  # List of 2D corner coordinates for each detection
@@ -87,9 +88,6 @@ class Image(BaseImage):
         """Get camera center in world coordinates."""
         R = qvec2rotmat(self.qvec)
         return -R.T @ self.tvec
-    
-
-
 
 # Camera models
 CAMERA_MODELS = {
@@ -112,6 +110,7 @@ CAMERA_MODEL_IDS = dict(
 CAMERA_MODEL_NAMES = dict(
     [(camera_model.model_name, camera_model) for camera_model in CAMERA_MODELS]
 )
+
 class SfmProjectBase(ABC):
     """
     Abstract base class for Structure from Motion projects.
@@ -122,7 +121,6 @@ class SfmProjectBase(ABC):
     
     def detect_markers(self, 
                       dict_type: int = cv2.aruco.DICT_4X4_50,
-                      detector: cv2.aruco.ArucoDetector = None,
                       detector_params: cv2.aruco.DetectorParameters = None,
                       progress_bar: bool = True,
                       num_processes: int = None,
@@ -140,12 +138,11 @@ class SfmProjectBase(ABC):
         """
         
         # Create detector if not provided
-        if detector is None:
-            if detector_params is None:
-                detector_params = cv2.aruco.DetectorParameters()
-                
-            aruco_dict = cv2.aruco.getPredefinedDictionary(dict_type)
-            detector = cv2.aruco.ArucoDetector(aruco_dict, detector_params)
+        if detector_params is None:
+            detector_params = cv2.aruco.DetectorParameters()
+            
+        aruco_dict = cv2.aruco.getPredefinedDictionary(dict_type)
+        detector = cv2.aruco.ArucoDetector(aruco_dict, detector_params)
         
         # Disable multiprocessing if requested
         if not use_multiprocessing:
@@ -173,7 +170,7 @@ class SfmProjectBase(ABC):
     
     def _store_marker_results(self, dict_type: int, raw_results: Dict):
         """
-        Store marker results using Marker namedtuples and additional 3D corner data.
+        Store marker results using Marker namedtuples with 3D corners included.
         
         :param dict_type: ArUco dictionary type
         :param raw_results: Raw results from localize_aruco_markers function
@@ -181,28 +178,23 @@ class SfmProjectBase(ABC):
         # Initialize storage if needed
         if not hasattr(self, '_markers'):
             self._markers = {}
-        if not hasattr(self, '_marker_corners_3d'):
-            self._marker_corners_3d = {}
             
         # Initialize for this dictionary type
         if dict_type not in self._markers:
             self._markers[dict_type] = {}
-        if dict_type not in self._marker_corners_3d:
-            self._marker_corners_3d[dict_type] = {}
         
         for aruco_id, data in raw_results.items():
-            # Create Marker namedtuple
+            # Create Marker namedtuple with 3D corners included
             marker = Marker(
                 id=aruco_id,
                 xyz=data['center_xyz'],
+                corners_3d=data['corners_3d'],
                 dict_type=dict_type,
-                # error=data['error'],
                 image_ids=data['image_ids'],
                 point2D_idxs=data['corner_pixels']
             )
             
             self._markers[dict_type][aruco_id] = marker
-            self._marker_corners_3d[dict_type][aruco_id] = data['corners_3d']
             
             logging.info(f"Stored marker dict={dict_type}, id={aruco_id}")
     
@@ -233,11 +225,10 @@ class SfmProjectBase(ABC):
         :param aruco_id: ArUco marker ID
         :return: 4x3 array of corner positions
         """
-        if (not hasattr(self, '_marker_corners_3d') or 
-            dict_type not in self._marker_corners_3d or 
-            aruco_id not in self._marker_corners_3d[dict_type]):
-            raise ValueError(f"Marker dict={dict_type}, id={aruco_id} not found or has no 3D corners")
-        return self._marker_corners_3d[dict_type][aruco_id]
+        marker = self.get_markers(dict_type, aruco_id)
+        if marker is None:
+            raise ValueError(f"Marker dict={dict_type}, id={aruco_id} not found")
+        return marker.corners_3d
     
     def get_marker_distance(self, dict_type: int, aruco_id: int) -> float:
         """
@@ -257,7 +248,6 @@ class SfmProjectBase(ABC):
         self._images = {}
         self._points3D = {}
         self._markers = {}  # Structure: {dict_type: {aruco_id: Marker}}
-        self._marker_corners_3d = {}  # Structure: {dict_type: {aruco_id: corners_3d}}
         self._load_data()
         self._verify_data_loaded()
         
@@ -273,12 +263,9 @@ class SfmProjectBase(ABC):
         if dict_type is not None:
             if dict_type in self._markers:
                 del self._markers[dict_type]
-            if hasattr(self, '_marker_corners_3d') and dict_type in self._marker_corners_3d:
-                del self._marker_corners_3d[dict_type]
             logging.info(f"Cleared markers for dict type {dict_type}")
         else:
             self._markers = {}
-            self._marker_corners_3d = {}
             logging.info("Cleared all markers")
 
     @abstractmethod
@@ -308,29 +295,30 @@ class SfmProjectBase(ABC):
             raise ValueError("Transform matrix must be 4x4")
         
         # Transform markers
-        if hasattr(self, '_markers') and hasattr(self, '_marker_corners_3d'):
+        if hasattr(self, '_markers'):
             for dict_type in self._markers:
                 for aruco_id in self._markers[dict_type]:
                     marker = self._markers[dict_type][aruco_id]
                     
-                    if dict_type in self._marker_corners_3d and aruco_id in self._marker_corners_3d[dict_type]:
-                        # Transform 3D corners
-                        corners_3d = self._marker_corners_3d[dict_type][aruco_id]
-                        transformed_corners = []
-                        for corner in corners_3d:
-                            corner_h = np.append(corner, 1)
-                            transformed_h = transform_matrix @ corner_h
-                            transformed_corners.append(transformed_h[:3])
-                        
-                        self._marker_corners_3d[dict_type][aruco_id] = np.array(transformed_corners)
-                        
-                        # Transform center position and update marker
-                        center_h = np.append(marker.xyz, 1)
-                        transformed_center_h = transform_matrix @ center_h
-                        new_center = transformed_center_h[:3]
-                        
-                        # Create new marker with transformed center
-                        self._markers[dict_type][aruco_id] = marker._replace(xyz=new_center)
+                    # Transform 3D corners
+                    transformed_corners = []
+                    for corner in marker.corners_3d:
+                        corner_h = np.append(corner, 1)
+                        transformed_h = transform_matrix @ corner_h
+                        transformed_corners.append(transformed_h[:3])
+                    
+                    transformed_corners_3d = np.array(transformed_corners)
+                    
+                    # Transform center position
+                    center_h = np.append(marker.xyz, 1)
+                    transformed_center_h = transform_matrix @ center_h
+                    new_center = transformed_center_h[:3]
+                    
+                    # Create new marker with transformed data
+                    self._markers[dict_type][aruco_id] = marker._replace(
+                        xyz=new_center,
+                        corners_3d=transformed_corners_3d
+                    )
         
         # Transform camera poses
         for img_id, img in self._images.items():

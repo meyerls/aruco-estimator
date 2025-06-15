@@ -7,7 +7,7 @@ See LICENSE file for more information.
 import numpy as np
 
 
-def intersect(P0: np.ndarray, N: np.ndarray, solve='ls') -> np.ndarray:
+def intersect(P0: np.ndarray, N: np.ndarray, solve='pseudo') -> np.ndarray:
     '''
     Least Squares Intersection of Lines: https://silo.tips/download/least-squares-intersection-of-lines#modals
 
