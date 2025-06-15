@@ -91,10 +91,10 @@ print(f"Target ArUco ID: {target_id}")
 - Only COLMAP .bin and .txt models are supported
 
 ## Roadmap
-- [ ] Project base should own localizer
+- [ ] Update README with multi tag examples
+- [ ] Improved pose estimation robustness
 - [ ] Implement the merge by tag tool 
 - [ ] Support for additional camera models
-- [ ] Improved pose estimation robustness
 - [ ] Dense cloud visualization fixes
 - [ ] Geo-referencing of ArUco markers with Earth coordinate system using GPS or RT
 
