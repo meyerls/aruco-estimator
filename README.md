@@ -86,7 +86,7 @@ print(f"Target ArUco ID: {target_id}")
 - Dense cloud visualization and modification is currently broken
 - Only SIMPLE_RADIAL and PINHOLE camera models are supported
 - Aruco boards are not uniquely supported 
-- Pose estimation is not robust to false detections; filtering would be beneficial
+- Pose estimation is not robust to false detections; ransac would be beneficial
 - Only COLMAP .bin and .txt models are supported
 
 ## Roadmap
