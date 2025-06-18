@@ -5,7 +5,7 @@ __pycache__/
 *.zip
 door/
 dumpy/
-
+normalized/
 # Byte-compiled / optimized / DLL files
 __pycache__/git s
 *.py[cod]

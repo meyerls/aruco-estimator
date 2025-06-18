@@ -2,40 +2,17 @@ import logging
 from copy import deepcopy
 from pathlib import Path
 import cv2
-from aruco_estimator.utils import get_normalization_transform
+from aruco_estimator.utils import get_transformation_between_clouds, get_corners_at_origin
 from aruco_estimator.visualization import VisualizationModel
 
 import json
 import os
 import numpy as np
-#TODO move to cli.py
-def get_dict_type(dict_size: int) -> int:
-    """
-    Map dictionary size number to OpenCV ArUco dictionary constant.
-    
-    Args:
-        dict_size: Dictionary size (4, 5, 6, 7)
-        
-    Returns:
-        OpenCV ArUco dictionary constant
-    """
-    dict_mapping = {
-        4: cv2.aruco.DICT_4X4_50,
-        5: cv2.aruco.DICT_5X5_50,
-        6: cv2.aruco.DICT_6X6_50,
-        7: cv2.aruco.DICT_7X7_50,
-    }
-    
-    if dict_size not in dict_mapping:
-        raise ValueError(f"Unsupported dictionary size: {dict_size}. Supported sizes: {list(dict_mapping.keys())}")
-    
-    return dict_mapping[dict_size]
-
 
 def register(
     project,
     aruco_size: float = 0.2,
-    dict_type: int = 4,  # Changed to simple number (4 for 4x4, 5 for 5x5, etc.)
+    dict_type: int = cv2.aruco.DICT_4X4_50, 
     show_original: bool = False,
     show: bool = False,
     target_id: int = 0,
@@ -48,7 +25,7 @@ def register(
     Args:
         project: SfM project instance (not path)
         aruco_size: Size of ArUco marker in meters
-        dict_type: ArUco dictionary size (4 for 4x4, 5 for 5x5, 6 for 6x6, 7 for 7x7)
+        dict_type: ArUco dictionary size 
         show_original: Whether to show original poses in visualization
         show: Whether to show the result
         target_id: ID of ArUco marker to use as origin (default: 0)
@@ -56,13 +33,13 @@ def register(
         export_path: Path to export tag positions (default: project_path/aruco_tags.json)
     """
     # Convert dict_type number to OpenCV constant
-    cv_dict_type = get_dict_type(dict_type)
+    
     
     # Run ArUco detection with proper dictionary type
     logging.info(f"Detecting ArUco markers using {dict_type}x{dict_type} dictionary...")
     
     # Pass the dict_type parameter to detect_markers
-    aruco_results = project.detect_markers(dict_type=cv_dict_type)
+    aruco_results = project.detect_markers(dict_type=dict_type)
     
     if not aruco_results:
         logging.warning("No ArUco markers detected!")
@@ -78,7 +55,7 @@ def register(
     # logging.info(f"Using marker {target_id} for normalization (distance: {target_distance:.3f})")
     print(target_corners_3d) 
     # Calculate normalization transform with scaling
-    transform = get_normalization_transform(target_corners_3d, aruco_size)
+    transform = get_transformation_between_clouds(target_corners_3d, get_corners_at_origin(side_length=aruco_size))
     
     # Store original project state if needed for visualization
     original_project = None
@@ -142,7 +119,7 @@ def register(
         # Get all marker positions after transformation (they're already transformed in the project)
         all_markers = {}
         for dict_type_key, markers_dict in project.markers.items():
-            if dict_type_key == cv_dict_type:  # Only export markers from the dict we used
+            if dict_type_key == dict_type:  # Only export markers from the dict we used
                 for marker_id, marker in markers_dict.items():
                     try:
                         # Get transformed 3D corners from the project (already transformed)

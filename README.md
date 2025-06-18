@@ -19,9 +19,7 @@ This repository is tested on Python 3.6+ and can be installed from PyPI:
 ```bash
 pip install aruco-estimator
 ```
-
-**Note:** The PyPI release is currently out of date and broken as of 2025-03-22. For the latest stable version, install directly from source:
-
+or 
 ```
 pip install git+https://github.com/meyerls/aruco-estimator
 ```
@@ -50,17 +48,13 @@ aruco-estimator register ./door --target-id 7 --dict-type 4 --show --aruco-size 
     <img width="100%" src="assets/door.png?raw=true">
 </p>
 
-<p align="center" width="100%">
-    <img width="100%" src="assets/output.gif?raw=true">
-</p>
-
 ### Scripting
 
 ``` python 
 from aruco_estimator.sfm.colmap import COLMAPProject
-from aruco_estimator.utils import get_normalization_transform
+from aruco_estimator.utils import get_transformation_between_clouds,get_corners_at_origin
 import cv2
-project = COLMAPProject('./door')
+project = COLMAPProject('./door', )
 
 target_id = 7
 aruco_size = .15
@@ -71,19 +65,24 @@ target_corners_3d = aruco_results[target_id]
 print(target_corners_3d) 
 
 # Calculate 4x4 transform with scaling so tag is at the origin 
-transform = get_normalization_transform(target_corners_3d, aruco_size)
+transform = get_transformation_between_clouds(target_corners_3d, get_corners_at_origin(side_length=aruco_size))
 
 # Apply normalization to the project
 print("Normalizing poses and 3D points...")
 project.transform(transform)
 project.save("./transformed_output/")
 
-print(f"Target ArUco ID: {target_id}")
 ```
+
+<p align="center" width="100%">
+    <img width="100%" src="assets/output.gif?raw=true">
+</p>
+
+### Dense Clouds
+Current Script expects {project_dir}/fused.ply for dense cloud alignment and viz
 
 ## Known Limitations 
 
-- Dense cloud visualization and modification is currently broken
 - Only SIMPLE_RADIAL and PINHOLE camera models are supported
 - Aruco boards are not uniquely supported 
 - Pose estimation is not robust to false detections; ransac would be beneficial
@@ -94,7 +93,6 @@ print(f"Target ArUco ID: {target_id}")
 - [ ] Improved pose estimation robustness
 - [ ] Implement the merge by tag tool 
 - [ ] Support for additional camera models
-- [ ] Dense cloud visualization fixes
 - [ ] Geo-referencing of ArUco markers with Earth coordinate system using GPS or RT
 
 ## Troubleshooting

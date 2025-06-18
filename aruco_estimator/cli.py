@@ -5,6 +5,30 @@ import cv2
 from aruco_estimator.tools.register import register
 import logging
 from pathlib import Path
+import cv2
+#TODO move to cli.py
+def get_dict_type(dict_size: int) -> int:
+    """
+    Map dictionary size number to OpenCV ArUco dictionary constant.
+    
+    Args:
+        dict_size: Dictionary size (4, 5, 6, 7)
+        
+    Returns:
+        OpenCV ArUco dictionary constant
+    """
+    dict_mapping = {
+        4: cv2.aruco.DICT_4X4_50,
+        5: cv2.aruco.DICT_5X5_50,
+        6: cv2.aruco.DICT_6X6_50,
+        7: cv2.aruco.DICT_7X7_50,
+    }
+    
+    
+    if dict_size not in dict_mapping:
+        raise ValueError(f"Unsupported dictionary size: {dict_size}. Supported sizes: {list(dict_mapping.keys())}")
+    
+    return dict_mapping[dict_size]
 
 
 @click.group()
@@ -41,7 +65,7 @@ def register_cmd(project, aruco_size, dict_type, show_original, show,
     register(
         project=c_project,
         aruco_size=aruco_size,
-        dict_type=dict_type,
+        dict_type=get_dict_type(dict_type),
         show_original=show_original,
         show=show,
         target_id=target_id,

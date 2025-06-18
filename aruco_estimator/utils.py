@@ -47,48 +47,32 @@ def rotmat2qvec(R):
     if qvec[0] < 0:
         qvec *= -1
     return qvec
-
-def get_normalization_transform(
-    aruco_corners_3d: np.ndarray, true_aruco_size: float
-) -> np.ndarray:
-    """Calculate transformation matrix to normalize coordinates to ArUco marker plane with correct scaling using Kabsch-Umeyama algorithm."""
-    if len(aruco_corners_3d) != 4:
-        raise ValueError(f"Expected 4 ArUco corners, got {len(aruco_corners_3d)}")
-
+    
+def get_corners_at_origin(side_length=1):
     # Define target corners: a square centered at origin with the desired size
-    half_size = true_aruco_size / 2
+    half_size = side_length / 2
     target_corners = np.array([
         [-half_size, half_size, 0],    # top-left
         [half_size, half_size, 0],    # top-right
         [half_size, -half_size, 0],   # bottom-right  
         [-half_size, -half_size, 0],  # bottom-left
     ])
-    
-    # Calculate edge lengths for logging
-    edge1_length = np.linalg.norm(aruco_corners_3d[1] - aruco_corners_3d[0])
-    edge2_length = np.linalg.norm(aruco_corners_3d[3] - aruco_corners_3d[0]) 
-    avg_measured_size = (edge1_length + edge2_length) / 2
-    
-    logging.info(
-        f"ArUco measured width: {edge1_length:.4f}, height: {edge2_length:.4f}"
-    )
-    
+    return target_corners
+
+def get_transformation_between_clouds(
+    aruco_corners_3d: np.ndarray, target_corners: np.ndarray
+) -> np.ndarray:
+    """Calculate transformation matrix to normalize coordinates to ArUco marker plane with correct scaling using Kabsch-Umeyama algorithm."""
+    if len(aruco_corners_3d[0]) != 3:
+        raise ValueError(f"Expected 3D ArUco corners, got {aruco_corners_3d}")
+
     # Use Kabsch-Umeyama algorithm to find optimal transformation
     # This finds transformation from aruco_corners_3d to target_corners
     R, c, t = kabsch_umeyama(target_corners, aruco_corners_3d)
     
     # Convert to 4x4 transformation matrix
     transform = get_transformation_matrix_4x4(R, c, t)
-    
-    # Calculate effective scaling factor for logging
-    scale_factor = true_aruco_size / avg_measured_size
-    logging.info(
-        f"Kabsch-Umeyama scaling factor: {c:.4f}, expected scaling: {scale_factor:.4f}"
-    )
-    logging.info(
-        f"Applied transformation to normalize ArUco to size {true_aruco_size}"
-    )
-    
+ 
     return transform
 
 def get_transformation_matrix_4x4(R, c, t):

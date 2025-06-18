@@ -288,7 +288,9 @@ class SfmProjectBase(ABC):
     def save(self):
         """Save project data to files."""
         pass
-    
+    @abstractmethod
+    def _extra_transforms(self,transform_matrix):
+        pass
     def transform(self, transform_matrix):
         """Apply 4x4 transformation matrix to poses, 3D points, and markers."""
         if transform_matrix.shape != (4, 4):
@@ -319,6 +321,8 @@ class SfmProjectBase(ABC):
                         xyz=new_center,
                         corners_3d=transformed_corners_3d
                     )
+
+
         
         # Transform camera poses
         for img_id, img in self._images.items():
@@ -340,7 +344,7 @@ class SfmProjectBase(ABC):
             transformed_h = transform_matrix @ point_h
             new_xyz = transformed_h[:3]
             self._points3D[pt_id] = pt._replace(xyz=new_xyz)
-        
+        self._extra_transforms(transform_matrix)
         logging.info("Applied transformation to poses, 3D points, and markers")
 
     @property

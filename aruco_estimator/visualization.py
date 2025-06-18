@@ -72,6 +72,8 @@ class VisualizationModel:
             pcd.colors = o3d.utility.Vector3dVector(rgb)
 
        
+        if project.dense_point_cloud is not None:
+            self.__vis.add_geometry(project.dense_point_cloud)
 
         self.__vis.add_geometry(pcd)
         self.__vis.poll_events()
