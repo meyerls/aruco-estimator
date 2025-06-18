@@ -1,7 +1,7 @@
 [project]
 name = "aruco-estimator"
 version = "1.2.0"
-description = ""
+description = "Scene pose estimation using ArUco markers and 3D point clouds."
 authors = [
   { name = "Lukas Meyer", email = "lukas.meyer@fau.de" },
   { name = "Nile Walker", email = "nilezwalker@gmail.com" },
