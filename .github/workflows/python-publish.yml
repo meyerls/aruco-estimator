@@ -1,51 +1,44 @@
 name: Publish Python 🐍 distributions 📦 to PyPI and TestPyPI
 
-on: push
+on:
+  push:
+    branches:
+      - main  # Adjust this to your default or deployment branch
 
 jobs:
   build-n-publish:
-    name: Build and publish Python 🐍 distributions 📦 to PyPI
+    name: Build, Test, and Publish
     runs-on: ubuntu-latest
+
     steps:
-      - name: astral-sh/setup-uv
-        # You may pin to the exact commit or the version.
-        # uses: astral-sh/setup-uv@f0ec1fc3b38f5e7cd731bb6ce540c5af426746bb
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup UV
         uses: astral-sh/setup-uv@v6.1.0
         with:
-          # The version of uv to install e.g., `0.5.0` Defaults to the version in pyproject.toml or 'latest'.
-          version: # optional, default is 
-          # The version of Python to set UV_PYTHON to
-          python-version: # optional
-          # Use uv venv to activate a venv ready to be used by later steps. 
-          activate-environment: # optional, default is false
-          # The directory to execute all commands in and look for files such as pyproject.toml
-          working-directory: # optional, default is ${{ github.workspace }}
-          # Used to increase the rate limit when retrieving versions and downloading uv.
-          github-token: # optional, default is ${{ github.token }}
-          # # Enable uploading of the uv cache
-          # enable-cache: # optional, default is auto
-          # # Glob pattern to match files relative to the repository root to control the cache.
-          # cache-dependency-glob: # optional, default is **/*requirements*.txt
-          #   **/*constraints*.txt
-          #   **/*constraints*.in
-          #   **/pyproject.toml
-          #   **/uv.lock
-        - name: Build Project
-          run: uv build
+          version: latest
+          activate-environment: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-        # - uses: actions/checkout@master
-        # - name: Set up Python 3.8
-        #   uses: actions/setup-python@v1
-        #   with:
-        #       python-version: 3.8
-        # - name: Install pypa/build
-        #   run: python -m pip install build --user
-        # - name: Build a binary wheel and a source tarball
-        #   run: python -m build --sdist --wheel --outdir dist/ .
-        # - name: Publish distribution 📦 to Test PyPI
-        #   uses: pypa/gh-action-pypi-publish@master
-        #   with:
-        #     password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        #     repository_url: https://test.pypi.org/legacy/
-        #     skip_existing: true
-       
+      - name: Install Dependencies
+        run: uv sync --with dev
+
+      - name: Run Tests
+        run: uv run pytest
+
+      - name: Build Project
+        run: uv build
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+      # Optional: Publish to PyPI (uncomment to enable)
+      # - name: Publish to PyPI
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     password: ${{ secrets.PYPI_API_TOKEN }}
