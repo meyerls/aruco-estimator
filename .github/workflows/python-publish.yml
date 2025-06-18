@@ -22,7 +22,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Dependencies
-        run: uv sync --with dev
+        run: uv sync --group dev
 
       - name: Run Tests
         run: uv run pytest
