@@ -16,7 +16,6 @@ def register(
     show_original: bool = False,
     show: bool = False,
     target_id: int = 0,
-    export_tags: bool = False,
     export_path: str = None,
 ):
     """
@@ -32,9 +31,7 @@ def register(
         export_tags: Whether to export tag positions (default: False)
         export_path: Path to export tag positions (default: project_path/aruco_tags.json)
     """
-    # Convert dict_type number to OpenCV constant
-    
-    
+    export_tags = True
     # Run ArUco detection with proper dictionary type
     logging.info(f"Detecting ArUco markers using {dict_type}x{dict_type} dictionary...")
     
@@ -108,14 +105,7 @@ def register(
     if export_tags:
         
         logging.info("Exporting ArUco tag positions...")
-        if export_path is None:
-            # Use project directory if available, otherwise current directory
-            if hasattr(project, 'project_path'):
-                base_path = project.project_path
-            else:
-                base_path = Path.cwd()
-            export_path = base_path / "aruco_tags.json"
-        
+      
         # Get all marker positions after transformation (they're already transformed in the project)
         all_markers = {}
         for dict_type_key, markers_dict in project.markers.items():
@@ -123,7 +113,7 @@ def register(
                 for marker_id, marker in markers_dict.items():
                     try:
                         # Get transformed 3D corners from the project (already transformed)
-                        transformed_corners = project.get_marker_corners_3d(dict_type_key, marker_id)
+                        transformed_corners = project.get(dict_type_key, {}).get(marker_id, None)
                         
                         all_markers[int(marker_id)] = {
                             "corners_3d": transformed_corners.tolist(),
@@ -139,6 +129,13 @@ def register(
             "dict_type": f"{dict_type}x{dict_type}",
             "normalization_transform": transform.tolist()
         }
+        if export_path is None:
+            # Use project directory if available, otherwise current directory
+            if hasattr(project, 'project_path'):
+                base_path = project.project_path
+            else:
+                base_path = Path.cwd()
+            export_path = base_path / "aruco_tags.json"
         
         # Save to JSON file
         with open(export_path, "w") as f:

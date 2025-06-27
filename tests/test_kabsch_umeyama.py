@@ -18,7 +18,7 @@ def apply_transformation_4x4(points, T):
     # Convert back to 3D coordinates
     return transformed_homo[:, :3]
 
-# fails on ubuntu but not mac 
+#TODO: on ubuntu but not mac 
 # def test_identical_point_sets():
 #     """Test with identical point sets - should give identity transformation"""
 #     points = np.array([

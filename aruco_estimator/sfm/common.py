@@ -197,51 +197,7 @@ class SfmProjectBase(ABC):
             self._markers[dict_type][aruco_id] = marker
             
             logging.info(f"Stored marker dict={dict_type}, id={aruco_id}")
-    
-    def get_markers(self, dict_type: int = None, aruco_id: int = None):
-        """
-        Get stored markers from the project.
-        
-        :param dict_type: Optional dictionary type filter
-        :param aruco_id: Optional specific ArUco ID filter
-        :return: Marker namedtuple(s)
-        """
-        if not hasattr(self, '_markers') or not self._markers:
-            return {} if dict_type is None else (None if aruco_id is not None else {})
-            
-        if dict_type is not None:
-            dict_markers = self._markers.get(dict_type, {})
-            if aruco_id is not None:
-                return dict_markers.get(aruco_id, None)
-            return dict_markers
-        else:
-            return self._markers
-    
-    def get_marker_corners_3d(self, dict_type: int, aruco_id: int) -> np.ndarray:
-        """
-        Get 3D corners for a specific marker.
-        
-        :param dict_type: ArUco dictionary type
-        :param aruco_id: ArUco marker ID
-        :return: 4x3 array of corner positions
-        """
-        marker = self.get_markers(dict_type, aruco_id)
-        if marker is None:
-            raise ValueError(f"Marker dict={dict_type}, id={aruco_id} not found")
-        return marker.corners_3d
-    
-    def get_marker_distance(self, dict_type: int, aruco_id: int) -> float:
-        """
-        Get average edge distance for a specific marker.
-        
-        :param dict_type: ArUco dictionary type
-        :param aruco_id: ArUco marker ID
-        :return: Average distance between adjacent corners
-        """
-        from .aruco_detection import calculate_marker_distance
-        corners_3d = self.get_marker_corners_3d(dict_type, aruco_id)
-        return calculate_marker_distance(corners_3d)
-    
+ 
     def __init__(self, project_path):
         self._project_path = project_path
         self._cameras = {}
@@ -251,23 +207,6 @@ class SfmProjectBase(ABC):
         self._load_data()
         self._verify_data_loaded()
         
-    def clear_markers(self, dict_type: int = None):
-        """
-        Clear stored markers.
-        
-        :param dict_type: Optional specific dictionary type to clear (if None, clears all)
-        """
-        if not hasattr(self, '_markers'):
-            return
-            
-        if dict_type is not None:
-            if dict_type in self._markers:
-                del self._markers[dict_type]
-            logging.info(f"Cleared markers for dict type {dict_type}")
-        else:
-            self._markers = {}
-            logging.info("Cleared all markers")
-
     @abstractmethod
     def load_image_by_id(self, image_id):
         # return opencv image

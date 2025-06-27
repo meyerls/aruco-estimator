@@ -73,7 +73,7 @@ class VisualizationModel:
 
        
         if project.dense_point_cloud is not None:
-            self.__vis.add_geometry(project.dense_point_cloud)
+            self.__vis.add_geometry(project.dense_point_cloud )
 
         self.__vis.add_geometry(pcd)
         self.__vis.poll_events()
@@ -86,7 +86,7 @@ class VisualizationModel:
             "scale": 1.0,
             "color": [0.8, 0.2, 0.8],
             "show_images": True,
-            "image_alpha": 0.8
+            "image_alpha": 0.6
         }
         default_config.update(config)
         
@@ -128,7 +128,7 @@ class VisualizationModel:
         # Default configuration
         default_config = {
             "corner_size": 0.05,
-            "show_ids": True,
+            # "show_ids": True,
             "colors_by_dict": {
                 # Default colors for different dictionary types
                 "default": [1, 0, 1],  # Magenta
@@ -278,14 +278,14 @@ class VisualizationModel:
             center_sphere.paint_uniform_color(config["center_color"])
             self.__vis.add_geometry(center_sphere)
         
-        # Add text label if requested (note: Open3D text support is limited)
-        if config["show_ids"]:
-            # Create a small coordinate frame at marker center to indicate ID
-            # (Open3D doesn't have great text support, so this is a visual indicator)
-            center = np.mean(corners_3d, axis=0)
-            frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=config["corner_size"] * 2)
-            frame.translate(center)
-            self.__vis.add_geometry(frame)
+        # # Add text label if requested (note: Open3D text support is limited)
+        # if config["show_ids"]:
+        #     # Create a small coordinate frame at marker center to indicate ID
+        #     # (Open3D doesn't have great text support, so this is a visual indicator)
+        #     center = np.mean(corners_3d, axis=0)
+        #     frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=config["corner_size"] * 2)
+        #     frame.translate(center)
+        #     self.__vis.add_geometry(frame)
 
     def add_coordinate_frame(self, size=1.0, transform=None):
         """Add coordinate frame visualization.
@@ -333,59 +333,6 @@ class VisualizationModel:
         except Exception as e:
             print(f"Error adding detection lines for marker dict={dict_type}, id={marker_id}: {e}")
 
-    def add_aruco_marker(self, corners, color=[1, 0, 1], corner_size=0.10):
-        """Add ArUco marker visualization.
-        
-        Args:
-            corners: Array of 4 corner points
-            color: RGB color for marker edges
-            corner_size: Size of corner spheres
-        """
-        # Create ArUco marker visualization
-        aruco_lines = o3d.geometry.LineSet()
-        aruco_lines.points = o3d.utility.Vector3dVector(corners)
-        aruco_lines.lines = o3d.utility.Vector2iVector([[0,1], [1,2], [2,3], [3,0]])
-        aruco_lines.colors = o3d.utility.Vector3dVector([color for _ in range(4)])
-        
-        # Add lines
-        self.__vis.add_geometry(aruco_lines)
-        
-        # Add corner spheres instead of points for better visibility
-        corner_color = [1, 1, 0]  # Yellow corners
-        for corner in corners:
-            sphere = o3d.geometry.TriangleMesh.create_sphere(radius=corner_size)
-            sphere.translate(corner)
-            sphere.paint_uniform_color(corner_color)
-            self.__vis.add_geometry(sphere)
-
-    def add_aruco_markers(self, markers_dict: Dict[int, np.ndarray], 
-                         colors: Optional[List[List[float]]] = None,
-                         corner_size: float = 0.10):
-        """Add multiple ArUco markers with different colors.
-        
-        Args:
-            markers_dict: Dictionary of {marker_id: corners} 
-            colors: List of RGB colors, cycles if fewer colors than markers
-            corner_size: Size of corner spheres
-        """
-        if colors is None:
-            colors = [
-                [1, 0, 0],  # Red
-                [0, 1, 0],  # Green  
-                [0, 0, 1],  # Blue
-                [1, 1, 0],  # Yellow
-                [1, 0, 1],  # Magenta
-                [0, 1, 1],  # Cyan
-                [0.5, 0.5, 0],  # Olive
-                [0.5, 0, 0.5],  # Purple
-                [0, 0.5, 0.5],  # Teal
-                [0.7, 0.3, 0.3],  # Brown
-            ]
-        
-        for i, (marker_id, corners) in enumerate(markers_dict.items()):
-            color = colors[i % len(colors)]
-            self.add_aruco_marker(corners, color=color, corner_size=corner_size)
-
     def show(self):
         """Display the visualization."""
         self.__vis.poll_events()
@@ -424,7 +371,7 @@ def draw_camera_viewport(extrinsics, intrinsics, image=None, scale=1.0,
     )
     
     # Normalize to 1 (this is the key difference from my previous implementation)
-    max_norm = max(fx, fy, cx, cy)
+    max_norm = max(fx, fy, cx, cy) 
     
     # Define frustum points exactly as in the working version
     points = [

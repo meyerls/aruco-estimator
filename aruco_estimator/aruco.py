@@ -434,13 +434,13 @@ def _calculate_3d_positions(project, dict_type: int, detection_data: Dict) -> Di
                 logging.info(f"Dict {dict_type}, ID {aruco_id}: "
                            f"detections={len(P0_reshaped)}")
 
-    # # DEBUG: Visualize rays and intersections
-    # print(f"\n=== DEBUG INFO for dict {dict_type} ===")
-    # print(f"Found {len(all_ids)} unique marker IDs: {sorted(all_ids)}")
-    # for aruco_id, data in ray_data.items():
-    #     print(f"Marker {aruco_id}: {len(data['P0'])} camera detections")
+    # DEBUG: Visualize rays and intersections
+    print(f"\n=== DEBUG INFO for dict {dict_type} ===")
+    print(f"Found {len(all_ids)} unique marker IDs: {sorted(all_ids)}")
+    for aruco_id, data in ray_data.items():
+        print(f"Marker {aruco_id}: {len(data['P0'])} camera detections")
     
-    # if ray_data and any(len(data['P0']) > 0 for data in ray_data.values()):
-    #     _debug_visualize_rays(ray_data, marker_results)
+    if ray_data and any(len(data['P0']) > 0 for data in ray_data.values()):
+        _debug_visualize_rays(ray_data, marker_results)
     
     return marker_results
