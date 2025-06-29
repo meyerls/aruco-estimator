@@ -48,7 +48,19 @@ aruco-estimator register ./door --target-id 7 --dict-type 4 --show --aruco-size 
     <img width="100%" src="assets/door.png?raw=true">
 </p>
 
+
+### Merging 
+
+
+
 ### Scripting
+
+Test the registration functionality with the example project:
+
+```bash
+aruco-estimator align .data/_park .data/_alley--target-id 7 --dict-type 4 --show --aruco-size 0.15
+
+```
 
 ``` python 
 from aruco_estimator.sfm.colmap import COLMAPProject
