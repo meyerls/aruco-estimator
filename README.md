@@ -67,7 +67,7 @@ from aruco_estimator.sfm.colmap import COLMAPProject
 from aruco_estimator.utils import get_transformation_between_clouds,get_corners_at_origin
 import cv2
 project = COLMAPProject('./door', )
-
+/sparse/0
 target_id = 7
 aruco_size = .15
 aruco_results = project.detect_markers(dict_type=cv2.aruco.DICT_4X4_50)

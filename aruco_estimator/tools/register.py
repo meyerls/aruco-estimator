@@ -1,6 +1,5 @@
 import logging
 import cv2
-import numpy as np
 from aruco_estimator.utils import (
     get_transformation_between_clouds,
     get_corners_at_origin,

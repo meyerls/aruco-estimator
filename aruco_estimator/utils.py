@@ -4,8 +4,6 @@ Licensed under the MIT License.
 See LICENSE file for more information.
 """
 
-import logging
-from typing import Tuple
 import numpy as np
 from .opt import kabsch_umeyama
 

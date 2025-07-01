@@ -42,21 +42,23 @@ from aruco_estimator.sfm.common import (
     SfmProjectBase,
 )
 
-import os
-import cv2
-import numpy as np
 import open3d as o3d
-from pathlib import Path
-from typing import Optional, Dict, Any, Tuple
-from ..utils import qvec2rotmat,rotmat2qvec
+from typing import Optional
+
+
 class COLMAPProject(SfmProjectBase):
     """COLMAP project implementation."""
-    
-    def __init__(self, project_path: str, sparse_folder: str = "sparse/", 
-                 images_path: Optional[str] = None, dense_path: Optional[str] = None):
+
+    def __init__(
+        self,
+        project_path: str,
+        sparse_folder: str = "sparse/0",
+        images_path: Optional[str] = None,
+        dense_path: Optional[str] = None,
+    ):
         """
         Initialize COLMAP project.
-        
+
         Args:
             project_path: Path to the COLMAP project directory
             sparse_folder: Relative path to sparse reconstruction folder
@@ -66,88 +68,88 @@ class COLMAPProject(SfmProjectBase):
         self.sparse_folder = sparse_folder
         self.images_path = images_path or os.path.join(project_path, "images")
         self.dense_path = dense_path or os.path.join(project_path, "fused.ply")
-        
+
         # Initialize dense point cloud data
         self.dense_point_cloud = None
-        
+
         # Load PLY data if it exists
         if os.path.exists(self.dense_path):
             self._load_ply_data()
-            
+
         super().__init__(project_path)
-    
+
     def _load_ply_data(self) -> None:
         """Load dense point cloud data from PLY file."""
         try:
             self.dense_point_cloud = o3d.io.read_point_cloud(self.dense_path)
-            print(f"Loaded dense point cloud with {len(self.dense_point_cloud.points)} points")
+            print(
+                f"Loaded dense point cloud with {len(self.dense_point_cloud.points)} points"
+            )
         except Exception as e:
             print(f"Warning: Could not load PLY file {self.dense_path}: {e}")
             self.dense_point_cloud = None
-            
-    def _extra_transforms(self,transform_matrix):
+
+    def _extra_transforms(self, transform_matrix):
         # Transform dense point cloud if loaded
         if self.dense_point_cloud is not None:
             self.dense_point_cloud.transform(transform_matrix)
-    
-    
+
     def load_image_by_id(self, image_id: int) -> np.ndarray:
         """
         Load image by COLMAP image ID.
-        
+
         Args:
             image_id: COLMAP image ID
-            
+
         Returns:
             Loaded image as numpy array
         """
         if image_id not in self._images:
             raise ValueError(f"Image ID {image_id} not found in project")
-        
+
         image_path = os.path.join(self.images_path, self._images[image_id].name)
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image file not found: {image_path}")
-        
+
         return cv2.imread(image_path)
-    
+
     def _load_data(self) -> None:
         """Load COLMAP data and convert to standardized format."""
         sparse_path = os.path.join(self._project_path, self.sparse_folder)
-        
+
         if not os.path.exists(sparse_path):
             raise FileNotFoundError(f"Sparse folder {sparse_path} does not exist")
-    
+
         # Load raw COLMAP data
         cameras, images, points3D = read_model(sparse_path)
-        
+
         # Convert to standardized format
-        self._cameras = {
-            cam_id: Camera(*cam) for cam_id, cam in cameras.items()
-        }
-        self._images = {
-            img_id: Image(*img) for img_id, img in images.items()
-        }
+        self._cameras = {cam_id: Camera(*cam) for cam_id, cam in cameras.items()}
+        self._images = {img_id: Image(*img) for img_id, img in images.items()}
         self._points3D = points3D
-        
-        print(f"Loaded {len(self._cameras)} cameras, {len(self._images)} images, "
-                f"{len(self._points3D)} 3D points")
-               
-    
+
+        print(
+            f"Loaded {len(self._cameras)} cameras, {len(self._images)} images, "
+            f"{len(self._points3D)} 3D points"
+        )
+
     def save(self, output_path: Optional[str] = None, format_ext: str = ".txt") -> None:
         """
         Save COLMAP project data.
-        
+
         Args:
             output_path: Output directory path
             format_ext: File format extension (.txt or .bin)
         """
         if output_path is None:
             output_path = os.path.join(self._project_path, "scaled")
-        
+
         # Create output directory
         os.makedirs(output_path, exist_ok=True)
-        
-        write_model(self._cameras, self._images, self._points3D, output_path, format_ext)
+
+        write_model(
+            self._cameras, self._images, self._points3D, output_path, format_ext
+        )
         print(f"Saved sparse reconstruction to {output_path}")
 
         # Save dense point cloud if loaded and modified
@@ -158,7 +160,7 @@ class COLMAPProject(SfmProjectBase):
                 print(f"Saved dense point cloud to {ply_output_path}")
             except Exception as e:
                 print(f"Warning: Failed to save PLY file: {e}")
-    
+
 
 def read_next_bytes(fid, num_bytes, format_char_sequence, endian_character="<"):
     """Read and unpack the next bytes from a binary file.
@@ -352,9 +354,9 @@ def read_images_binary(path_to_model_file):
                 binary_image_name += current_char
                 current_char = read_next_bytes(fid, 1, "c")[0]
             image_name = binary_image_name.decode("utf-8")
-            num_points2D = read_next_bytes(
-                fid, num_bytes=8, format_char_sequence="Q"
-            )[0]
+            num_points2D = read_next_bytes(fid, num_bytes=8, format_char_sequence="Q")[
+                0
+            ]
             x_y_id_s = read_next_bytes(
                 fid,
                 num_bytes=24 * num_points2D,
@@ -489,9 +491,9 @@ def read_points3D_binary(path_to_model_file):
             xyz = np.array(binary_point_line_properties[1:4])
             rgb = np.array(binary_point_line_properties[4:7])
             error = np.array(binary_point_line_properties[7])
-            track_length = read_next_bytes(
-                fid, num_bytes=8, format_char_sequence="Q"
-            )[0]
+            track_length = read_next_bytes(fid, num_bytes=8, format_char_sequence="Q")[
+                0
+            ]
             track_elems = read_next_bytes(
                 fid,
                 num_bytes=8 * track_length,
@@ -605,12 +607,10 @@ def write_model(cameras, images, points3D, path, ext=".bin"):
     return cameras, images, points3D
 
 
-
 # Example usage
 if __name__ == "__main__":
     # Create a COLMAP project - converts data to standardized format
     project = COLMAPProject("door")
-    
+
     # Save the processed reconstruction
     project.save("output", format_ext=".txt")
-    

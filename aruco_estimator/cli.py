@@ -6,7 +6,7 @@ from copy import deepcopy
 from pathlib import Path
 
 from aruco_estimator.tools.register import register
-from aruco_estimator.tools.align import align_projects
+from aruco_estimator.tools.merge import align_projects
 from aruco_estimator.sfm.colmap import COLMAPProject
 from aruco_estimator.visualization import VisualizationModel
 
@@ -301,25 +301,27 @@ def align_cmd(
 
     # Register each project individually first
     registered_projects = []
-    transforms = []
+    # transforms = []
+    target_corners_3d = aruco_results[target_id]
+    logging.info(f"Using marker {target_id} for normalization")
+    logging.debug(f"Target corners 3D: {target_corners_3d}")
 
+    # Calculate normalization transform with scaling
+    transform = get_transformation_between_clouds(
+        target_corners_3d, get_corners_at_origin(side_length=aruco_size)
+    )
+
+    # Apply normalizatio
     for i, proj in enumerate(projects):
         logging.info(f"Registering project {i+1}/{len(projects)}")
 
         # Store original if needed
         original_proj = deepcopy(proj) if show_original else None
 
-        # Register the project
-        registered_proj, transform, aruco_results = register(
-            project=proj,
-            aruco_size=aruco_size,
-            dict_type=get_dict_type(dict_type),
-            target_id=target_id,
-        )
+        registered_proj = proj.detect_markers()
 
         if registered_proj is not None:
             registered_projects.append(registered_proj)
-            transforms.append(transform)
         else:
             logging.warning(f"Failed to register project {proj_dir}")
 
@@ -330,8 +332,8 @@ def align_cmd(
     # Align projects (this function needs to be implemented)
     aligned_projects = align_projects(
         projects=registered_projects,
-        aruco_size=aruco_size,
-        dict_type=get_dict_type(dict_type),
+        # aruco_size=aruco_size,
+        # dict_type=get_dict_type(dict_type),
         target_id=target_id,
     )
 
