@@ -12,6 +12,7 @@
 ## About
 
 This project automatically computes the correct scale and registration of 3D reconstructions generated with [COLMAP](https://colmap.github.io/) by placing one or more ArUco markers in the scene. This module does not perform the reconstruction task itself so a colmap installation isn't needed.
+
 ## Installation
 
 This repository is tested on Python 3.6+ and can be installed from PyPI:
@@ -19,7 +20,9 @@ This repository is tested on Python 3.6+ and can be installed from PyPI:
 ```bash
 pip install aruco-estimator
 ```
-or 
+
+or
+
 ```
 pip install git+https://github.com/meyerls/aruco-estimator
 ```
@@ -48,10 +51,7 @@ aruco-estimator register ./door --target-id 7 --dict-type 4 --show --aruco-size 
     <img width="100%" src="assets/door.png?raw=true">
 </p>
 
-
-### Merging 
-
-
+### Merging
 
 ### Scripting
 
@@ -62,7 +62,7 @@ aruco-estimator align .data/_park .data/_alley--target-id 7 --dict-type 4 --show
 
 ```
 
-``` python 
+``` python
 from aruco_estimator.sfm.colmap import COLMAPProject
 from aruco_estimator.utils import get_transformation_between_clouds,get_corners_at_origin
 import cv2
@@ -91,19 +91,20 @@ project.save("./transformed_output/")
 </p>
 
 ### Dense Clouds
+
 Current Script expects {project_dir}/fused.ply for dense cloud alignment and viz
 
-## Known Limitations 
+## Known Limitations
 
 - Only SIMPLE_RADIAL and PINHOLE camera models are supported
-- Aruco boards are not uniquely supported 
+- Aruco boards are not uniquely supported
 - Pose estimation is not robust to false detections; ransac would be beneficial
-- Only COLMAP .bin and .txt models are supported
 
 ## Roadmap
+
 - [ ] Update README with multi tag examples
-- [ ] Improved pose estimation robustness
-- [ ] Implement the merge by tag tool 
+- [ ] Support april tags
+- [ ] Implement the merge by tag tool
 - [ ] Support for additional camera models
 - [ ] Geo-referencing of ArUco markers with Earth coordinate system using GPS or RT
 
@@ -125,7 +126,7 @@ pip install opencv-python opencv-contrib-python
 
 ## References
 
-[1] Erich, F., Bourreau, B., *Neural Scanning: Rendering and determining geometry of household objects using Neural Radiance Fields*. [Link](https://robocip-aist.github.io/sii_nerf_scans/). 2022
+[1] Erich, F., Bourreau, B., *Neural Scanning: Rendering and determining geometry of household objects using Neural Radiance Fields*. [sii_nerf_scans](https://robocip-aist.github.io/sii_nerf_scans/). 2022
 
 ## Citation
 

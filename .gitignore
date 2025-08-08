@@ -1,4 +1,5 @@
 .idea/
+.DS_Store
 aruco_estimator/data/
 data/
 __pycache__/
