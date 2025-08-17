@@ -6,7 +6,7 @@ authors = [
   { name = "Lukas Meyer", email = "lukas.meyer@fau.de" },
   { name = "Nile Walker", email = "nilezwalker@gmail.com" },
 ]
-requires-python = ">=3.9,<4.0"
+requires-python = ">=3.9,<3.11"
 readme = "README.md"
 dependencies = [
   "numpy>=1.22.4",
@@ -17,6 +17,7 @@ dependencies = [
   "opencv-python>=4.10.0.84",
   "opencv-contrib-python>=4.10.0.84",
   "click>=8.1.8,<9",
+  "pupil-apriltags>=1.0.4.post11",
 ]
 
 [project.scripts]

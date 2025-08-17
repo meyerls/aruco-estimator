@@ -5,6 +5,7 @@ data/
 __pycache__/
 *.zip
 door/
+apriltag_tags.json
 dumpy/
 normalized/
 # Byte-compiled / optimized / DLL files
@@ -24,6 +25,7 @@ develop-eggs/
 dist/
 downloads/
 eggs/
+
 .eggs/
 lib64/
 parts/

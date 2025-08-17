@@ -34,47 +34,96 @@ def get_dict_type(dict_size: int) -> int:
     return dict_mapping[dict_size]
 
 
-def export_aruco_tags(
-    project, aruco_size, target_id, dict_type, transform, export_path=None
+def get_apriltag_family(family_name: str) -> str:
+    """
+    Validate and return AprilTag family name.
+    Args:
+        family_name: AprilTag family name
+    Returns:
+        Validated family name
+    """
+    valid_families = [
+        "tag16h5",
+        "tag25h9",
+        "tag36h10",
+        "tag36h11",
+        "tagCircle21h7",
+        "tagCircle49h12",
+        "tagCustom48h12",
+        "tagStandard41h12",
+        "tagStandard52h13",
+    ]
+    if family_name not in valid_families:
+        raise ValueError(
+            f"Unsupported AprilTag family: {family_name}. Supported families: {valid_families}"
+        )
+    return family_name
+
+
+def export_marker_tags(
+    project, marker_size, target_id, marker_config, transform, export_path=None
 ):
     """
-    Export ArUco tag positions to JSON file.
+    Export marker tag positions to JSON file.
 
     Args:
         project: SfM project instance
-        aruco_size: Size of ArUco marker in meters
-        target_id: ID of target ArUco marker
-        dict_type: ArUco dictionary type
+        marker_size: Size of marker in meters
+        target_id: ID of target marker
+        marker_config: Dictionary containing marker configuration (type, dict_type/family)
         transform: Transformation matrix used for normalization
         export_path: Path to export file (optional)
     """
-    logging.info("Exporting ArUco tag positions...")
+    logging.info(f"Exporting {marker_config['type']} tag positions...")
 
     # Get all marker positions after transformation
     all_markers = {}
-    for dict_type_key, markers_dict in project.markers.items():
-        if dict_type_key == dict_type:  # Only export markers from the dict we used
-            for marker_id, marker in markers_dict.items():
-                try:
-                    # Get transformed 3D corners from the project
-                    transformed_corners = project.get(dict_type_key, {}).get(
-                        marker_id, None
-                    )
 
-                    all_markers[int(marker_id)] = {
-                        "corners_3d": transformed_corners.tolist(),
-                        "center_3d": transformed_corners.mean(axis=0).tolist(),
-                    }
-                except Exception as e:
-                    logging.warning(f"Could not export marker {marker_id}: {e}")
+    if marker_config["type"] == "aruco":
+        dict_type = marker_config["dict_type"]
+        for dict_type_key, markers_dict in project.markers.items():
+            if dict_type_key == dict_type:  # Only export markers from the dict we used
+                for marker_id, marker in markers_dict.items():
+                    try:
+                        # Get transformed 3D corners from the project
+                        transformed_corners = project.get(dict_type_key, {}).get(
+                            marker_id, None
+                        )
+
+                        all_markers[int(marker_id)] = {
+                            "corners_3d": transformed_corners.tolist(),
+                            "center_3d": transformed_corners.mean(axis=0).tolist(),
+                        }
+                    except Exception as e:
+                        logging.warning(f"Could not export marker {marker_id}: {e}")
+
+    elif marker_config["type"] == "apriltag":
+        # AprilTag markers are stored differently - need to access them properly
+        for family_key, markers_dict in project.markers.items():
+            if isinstance(family_key, str):  # AprilTag families are strings
+                for marker_id, marker in markers_dict.items():
+                    try:
+                        all_markers[int(marker_id)] = {
+                            "corners_3d": marker.corners_3d.tolist(),
+                            "center_3d": marker.xyz.tolist(),
+                        }
+                    except Exception as e:
+                        logging.warning(f"Could not export marker {marker_id}: {e}")
 
     export_data = {
-        "aruco_tags": all_markers,
-        "aruco_size": aruco_size,
+        "marker_tags": all_markers,
+        "marker_size": marker_size,
         "target_id": target_id,
-        "dict_type": f"{dict_type}x{dict_type}",
+        "marker_type": marker_config["type"],
         "normalization_transform": transform.tolist(),
     }
+
+    if marker_config["type"] == "aruco":
+        export_data["aruco_dict_type"] = (
+            f"{marker_config['dict_type']}x{marker_config['dict_type']}"
+        )
+    elif marker_config["type"] == "apriltag":
+        export_data["apriltag_family"] = marker_config["family"]
 
     if export_path is None:
         # Use project directory if available, otherwise current directory
@@ -82,23 +131,25 @@ def export_aruco_tags(
             base_path = project.project_path
         else:
             base_path = Path.cwd()
-        export_path = base_path / "aruco_tags.json"
+
+        marker_type = marker_config["type"]
+        export_path = base_path / f"{marker_type}_tags.json"
 
     # Save to JSON file
     with open(export_path, "w") as f:
         json.dump(export_data, f, indent=2)
 
-    logging.info(f"ArUco tag positions exported to {export_path}")
+    logging.info(f"{marker_config['type']} tag positions exported to {export_path}")
 
 
-def visualize_project(project, original_project=None, aruco_size=0.2):
+def visualize_project(project, original_project=None, marker_size=0.2):
     """
     Visualize the project with optional original data overlay.
 
     Args:
         project: Transformed SfM project instance
         original_project: Original project for comparison (optional)
-        aruco_size: Size of ArUco marker for coordinate frame
+        marker_size: Size of marker for coordinate frame
     """
     model = VisualizationModel()
     model.create_window()
@@ -132,7 +183,7 @@ def visualize_project(project, original_project=None, aruco_size=0.2):
     )
 
     # Add coordinate frame at origin
-    model.add_coordinate_frame(size=aruco_size)
+    model.add_coordinate_frame(size=marker_size)
 
     # Show visualization
     model.show()
@@ -163,13 +214,24 @@ def main():
 @main.command("register")
 @click.argument("project", type=click.Path(exists=True))
 @click.option(
-    "--aruco-size", type=float, default=0.2, help="Size of the aruco marker in meter."
+    "--marker-size", type=float, default=0.2, help="Size of the marker side in meters."
 )
 @click.option(
     "--dict-type",
     type=int,
     default=4,
-    help="ArUco dictionary type (e.g. 4=cv2.aruco.DICT_4X4_50)",
+    help="ArUco dictionary type (e.g. 4=cv2.aruco.DICT_4X4_50). Only used with ArUco markers.",
+)
+@click.option(
+    "--april",
+    is_flag=True,
+    help="Use AprilTag detection instead of ArUco markers",
+)
+@click.option(
+    "--apriltag-family",
+    type=str,
+    default="tag36h11",
+    help="AprilTag family (e.g., tag36h11, tag25h9, tag16h5). Only used with --april flag.",
 )
 @click.option(
     "--show-original",
@@ -185,17 +247,17 @@ def main():
     "--target-id",
     type=int,
     default=0,
-    help="ID of ArUco marker to use as origin (default: 0)",
+    help="ID of marker to use as origin (default: 0)",
 )
 @click.option(
     "--export-path",
     type=click.Path(),
-    help="Path to export ArUco tag positions (default: project_path/aruco_tags.json)",
+    help="Path to export marker tag positions (default: project_path/[marker_type]_tags.json)",
 )
 @click.option(
     "--no-export",
     is_flag=True,
-    help="Skip exporting ArUco tag positions",
+    help="Skip exporting marker tag positions",
 )
 @click.option(
     "--no-save",
@@ -204,8 +266,10 @@ def main():
 )
 def register_cmd(
     project,
-    aruco_size,
+    marker_size,
     dict_type,
+    april,
+    apriltag_family,
     show_original,
     show,
     target_id,
@@ -213,7 +277,7 @@ def register_cmd(
     no_export,
     no_save,
 ):
-    """Normalize COLMAP poses relative to ArUco marker."""
+    """Normalize COLMAP poses relative to ArUco marker or AprilTag."""
     # Load COLMAP project
     logging.info("Loading COLMAP project...")
     c_project = COLMAPProject(Path(project))
@@ -223,36 +287,57 @@ def register_cmd(
     if show_original:
         original_project = deepcopy(c_project)
 
+    # Prepare marker configuration
+    if april:
+        # Validate AprilTag family
+        try:
+            validated_family = get_apriltag_family(apriltag_family)
+        except ValueError as e:
+            logging.error(str(e))
+            return
+
+        marker_config = {"type": "apriltag", "family": validated_family}
+        logging.info(f"Using AprilTag detection with family: {validated_family}")
+    else:
+        # Validate ArUco dictionary
+        try:
+            validated_dict_type = get_dict_type(dict_type)
+        except ValueError as e:
+            logging.error(str(e))
+            return
+
+        marker_config = {"type": "aruco", "dict_type": validated_dict_type}
+        logging.info(f"Using ArUco detection with dictionary type: {dict_type}")
+
     # Perform registration (core functionality only)
-    registered_project, transform, aruco_results = register(
+    registered_project, transform, marker_results = register(
         project=c_project,
-        aruco_size=aruco_size,
-        dict_type=get_dict_type(dict_type),
+        marker_size=marker_size,
+        marker_config=marker_config,
         target_id=target_id,
     )
 
     if registered_project is None:
         logging.error("Registration failed!")
         return
-
-    # Handle visualization
-    if show:
-        visualize_project(registered_project, original_project, aruco_size)
-
-    # Handle export
-    if not no_export:
-        export_aruco_tags(
-            registered_project,
-            aruco_size,
-            target_id,
-            get_dict_type(dict_type),
-            transform,
-            export_path,
-        )
-
     # Handle saving
     if not no_save:
         save_normalized_project(registered_project)
+
+    # Handle visualization
+    if show:
+        visualize_project(registered_project, original_project, marker_size)
+
+    # Handle export
+    if not no_export:
+        export_marker_tags(
+            registered_project,
+            marker_size,
+            target_id,
+            marker_config,
+            transform,
+            export_path,
+        )
 
     logging.info("Registration complete!")
 
@@ -260,7 +345,7 @@ def register_cmd(
 @main.command("align")
 @click.argument("project_dirs", nargs=-1, type=click.Path(exists=True), required=True)
 @click.option(
-    "--aruco-size", type=float, default=0.2, help="Size of the aruco marker in meter."
+    "--marker-size", type=float, default=0.2, help="Size of the marker in meters."
 )
 @click.option(
     "--dict-type",
@@ -282,11 +367,11 @@ def register_cmd(
     "--target-id",
     type=int,
     default=0,
-    help="ID of ArUco marker to use as origin (default: 0)",
+    help="ID of marker to use as origin (default: 0)",
 )
 def align_cmd(
     project_dirs,
-    aruco_size,
+    marker_size,
     dict_type,
     show_original,
     show,
@@ -301,24 +386,22 @@ def align_cmd(
 
     # Register each project individually first
     registered_projects = []
-    # transforms = []
-    target_corners_3d = aruco_results[target_id]
-    logging.info(f"Using marker {target_id} for normalization")
-    logging.debug(f"Target corners 3D: {target_corners_3d}")
 
-    # Calculate normalization transform with scaling
-    transform = get_transformation_between_clouds(
-        target_corners_3d, get_corners_at_origin(side_length=aruco_size)
-    )
-
-    # Apply normalizatio
     for i, proj in enumerate(projects):
         logging.info(f"Registering project {i+1}/{len(projects)}")
 
         # Store original if needed
         original_proj = deepcopy(proj) if show_original else None
 
-        registered_proj = proj.detect_markers()
+        # Use ArUco for alignment (could be extended to support AprilTag later)
+        marker_config = {"type": "aruco", "dict_type": get_dict_type(dict_type)}
+
+        registered_proj, _, _ = register(
+            project=proj,
+            marker_size=marker_size,
+            marker_config=marker_config,
+            target_id=target_id,
+        )
 
         if registered_proj is not None:
             registered_projects.append(registered_proj)
@@ -332,8 +415,6 @@ def align_cmd(
     # Align projects (this function needs to be implemented)
     aligned_projects = align_projects(
         projects=registered_projects,
-        # aruco_size=aruco_size,
-        # dict_type=get_dict_type(dict_type),
         target_id=target_id,
     )
 
@@ -359,7 +440,7 @@ def align_cmd(
             )
 
         # Add coordinate frame at origin
-        model.add_coordinate_frame(size=aruco_size)
+        model.add_coordinate_frame(size=marker_size)
         model.show()
 
     logging.info("Alignment complete!")

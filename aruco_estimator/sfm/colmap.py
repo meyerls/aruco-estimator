@@ -42,8 +42,13 @@ from aruco_estimator.sfm.common import (
     SfmProjectBase,
 )
 
+import os
+import cv2
+import numpy as np
 import open3d as o3d
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Dict, Any, Tuple
+from ..utils import qvec2rotmat, rotmat2qvec
 
 
 class COLMAPProject(SfmProjectBase):
@@ -52,7 +57,7 @@ class COLMAPProject(SfmProjectBase):
     def __init__(
         self,
         project_path: str,
-        sparse_folder: str = "sparse/0",
+        sparse_folder: str = "sparse/",
         images_path: Optional[str] = None,
         dense_path: Optional[str] = None,
     ):
