@@ -280,7 +280,7 @@ def register_cmd(
     """Normalize COLMAP poses relative to ArUco marker or AprilTag."""
     # Load COLMAP project
     logging.info("Loading COLMAP project...")
-    c_project = COLMAPProject(Path(project))
+    c_project = COLMAPProject(Path(project), sparse_folder="sparse/0")
 
     # Store original project state if needed for visualization
     original_project = None

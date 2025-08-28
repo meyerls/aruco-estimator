@@ -106,7 +106,7 @@ def register(
 
     # Calculate normalization transform with scaling
     transform = get_transformation_between_clouds(
-        target_corners_3d, get_corners_at_origin(side_length=marker_size * 2)
+        target_corners_3d, get_corners_at_origin(side_length=marker_size)
     )
 
     # Apply normalization to the project
