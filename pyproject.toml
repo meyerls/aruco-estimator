@@ -6,7 +6,7 @@ authors = [
   { name = "Lukas Meyer", email = "lukas.meyer@fau.de" },
   { name = "Nile Walker", email = "nilezwalker@gmail.com" },
 ]
-requires-python = ">=3.9,<3.11"
+requires-python = ">=3.8,<3.11"
 readme = "README.md"
 dependencies = [
   "numpy>=1.22.4",
@@ -22,9 +22,8 @@ dependencies = [
 
 [project.scripts]
 aruco-estimator = "aruco_estimator.cli:main"
-
 [dependency-groups]
-dev = ["ruff>=0.8.4,<0.9", "ipykernel>=6.29.5,<7", "pytest>=8.4.0"]
+dev = ["ruff>=0.8.4,<0.9", "ipykernel>=6.29.5,<7", "pytest>=7.0.0,<8.4.0"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
