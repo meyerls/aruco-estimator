@@ -417,6 +417,58 @@ def _detect_aruco_markers_in_project(
     return _process_detection_results(project, image_ids, results, MarkerType.ARUCO)
 
 
+def detect_apriltag_markers_in_image(
+    image: np.ndarray, detector: AprilTagDetector
+) -> Tuple[Optional[List], Optional[List], tuple]:
+    """
+    Detect AprilTag markers in a single image using a pre-created detector.
+
+    :param image: Input image
+    :param detector: Pre-created AprilTagDetector instance
+    :return: (corners, marker_ids, image_size)
+    """
+    image_size = image.shape
+
+    # Convert to grayscale if needed
+    if len(image.shape) == 3:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = image
+
+    # Detect tags using the passed detector
+    try:
+        results = detector.detect(gray)
+    except Exception as e:
+        logging.warning(f"AprilTag detection failed: {e}")
+        return None, None, image_size
+
+    if not results:
+        return None, None, image_size
+
+    # Convert to format compatible with ArUco
+    corners = []
+    marker_ids = []
+
+    for result in results:
+        # pupil-apriltags corners are in different order than ArUco
+        # pupil-apriltags: bottom-left, bottom-right, top-right, top-left
+        # ArUco: top-left, top-right, bottom-right, bottom-left
+        # Reorder to match ArUco convention
+        corners_reordered = np.array(
+            [
+                result.corners[3],  # top-left
+                result.corners[2],  # top-right
+                result.corners[1],  # bottom-right
+                result.corners[0],  # bottom-left
+            ]
+        ).astype(np.float32)
+
+        corners.append(corners_reordered)
+        marker_ids.append(result.tag_id)
+
+    return corners, marker_ids, image_size
+
+
 def _detect_apriltag_markers_in_project(
     project,
     tag_family: str,
@@ -424,6 +476,7 @@ def _detect_apriltag_markers_in_project(
 ) -> Dict:
     """
     Detect AprilTag markers in all project images using pupil-apriltags.
+    Fixed version that creates detector once and reuses it.
     """
     # Load images
     image_ids = list(project.images.keys())
@@ -437,17 +490,87 @@ def _detect_apriltag_markers_in_project(
         image = project.load_image_by_id(image_id)
         images.append(image)
 
-    # Sequential AprilTag detection
-    results = []
-    for image in tqdm(
-        images,
-        desc=f"Detecting AprilTag ({tag_family})",
+    # Create the detector ONCE outside the loop
+    detector = None
+    try:
+        detector = AprilTagDetector(families=tag_family)
+        logging.info(f"Created AprilTag detector for family: {tag_family}")
+
+        # Sequential AprilTag detection with reused detector
+        results = []
+        for image in tqdm(
+            images,
+            desc=f"Detecting AprilTag ({tag_family})",
+            disable=not progress_bar,
+        ):
+            corners, marker_ids, image_size = detect_apriltag_markers_in_image(
+                image, detector
+            )
+            results.append((corners, marker_ids, image_size))
+
+    except Exception as e:
+        logging.error(f"AprilTag detection failed: {e}")
+        results = [(None, None, image.shape) for image in images]
+    finally:
+        # Explicitly clean up detector
+        if detector is not None:
+            try:
+                del detector
+            except:
+                pass  # Ignore cleanup errors
+
+    return _process_detection_results(project, image_ids, results, MarkerType.APRILTAG)
+
+
+def _detect_apriltag_markers_in_project(
+    project,
+    tag_family: str,
+    progress_bar: bool,
+) -> Dict:
+    """
+    Detect AprilTag markers in all project images using pupil-apriltags.
+    Fixed version that creates detector once and reuses it.
+    """
+    # Load images
+    image_ids = list(project.images.keys())
+    images = []
+
+    for image_id in tqdm(
+        image_ids,
+        desc=f"Loading images for AprilTag {tag_family}",
         disable=not progress_bar,
     ):
-        corners, marker_ids, image_size = detect_apriltag_markers_in_image(
-            image, tag_family
-        )
-        results.append((corners, marker_ids, image_size))
+        image = project.load_image_by_id(image_id)
+        images.append(image)
+
+    # Create the detector ONCE outside the loop
+    detector = None
+    try:
+        detector = AprilTagDetector(families=tag_family)
+        logging.info(f"Created AprilTag detector for family: {tag_family}")
+
+        # Sequential AprilTag detection with reused detector
+        results = []
+        for image in tqdm(
+            images,
+            desc=f"Detecting AprilTag ({tag_family})",
+            disable=not progress_bar,
+        ):
+            corners, marker_ids, image_size = detect_apriltag_markers_in_image(
+                image, detector
+            )
+            results.append((corners, marker_ids, image_size))
+
+    except Exception as e:
+        logging.error(f"AprilTag detection failed: {e}")
+        results = [(None, None, image.shape) for image in images]
+    finally:
+        # Explicitly clean up detector
+        if detector is not None:
+            try:
+                del detector
+            except:
+                pass  # Ignore cleanup errors
 
     return _process_detection_results(project, image_ids, results, MarkerType.APRILTAG)
 
