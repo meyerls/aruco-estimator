@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, Tuple
 import logging
 
-# from ..aruco_localizer import ArucoLocalizer
 import numpy as np
 import cv2
 from ..utils import qvec2rotmat, rotmat2qvec
@@ -37,7 +36,7 @@ Marker = collections.namedtuple(
 
 
 class Camera(BaseCamera):
-    """Standardized camera class - all SfM software must produce this format."""
+    """Standardized camera class with OpenCV model support."""
 
     @property
     def K(self):
@@ -49,21 +48,82 @@ class Camera(BaseCamera):
             f, cx, cy = self.params
             return np.array([[f, 0, cx], [0, f, cy], [0, 0, 1]])
         elif self.model == "SIMPLE_RADIAL":
-            f, cx, cy, k1 = self.params  # k1 is distortion, not used in K matrix
+            f, cx, cy, k1 = self.params
             return np.array([[f, 0, cx], [0, f, cy], [0, 0, 1]])
-
+        elif self.model == "RADIAL":
+            f, cx, cy, k1, k2 = self.params
+            return np.array([[f, 0, cx], [0, f, cy], [0, 0, 1]])
+        elif self.model in ["OPENCV", "FULL_OPENCV"]:
+            fx, fy, cx, cy = self.params[:4]
+            return np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+        elif self.model == "OPENCV_FISHEYE":
+            fx, fy, cx, cy = self.params[:4]
+            return np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+        elif self.model == "FOV":
+            fx, fy, cx, cy, omega = self.params
+            return np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+        elif self.model == "SIMPLE_RADIAL_FISHEYE":
+            f, cx, cy, k1 = self.params
+            return np.array([[f, 0, cx], [0, f, cy], [0, 0, 1]])
+        elif self.model == "RADIAL_FISHEYE":
+            f, cx, cy, k1, k2 = self.params
+            return np.array([[f, 0, cx], [0, f, cy], [0, 0, 1]])
+        elif self.model == "THIN_PRISM_FISHEYE":
+            fx, fy, cx, cy = self.params[:4]
+            return np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
         else:
             raise NotImplementedError(f"Camera model {self.model} not implemented")
 
     @property
+    def D(self):
+        """Get OpenCV-compatible distortion coefficients."""
+        if self.model == "PINHOLE":
+            return np.zeros(4)
+        elif self.model == "SIMPLE_PINHOLE":
+            return np.zeros(4)
+        elif self.model == "SIMPLE_RADIAL":
+            f, cx, cy, k1 = self.params
+            return np.array([k1, 0, 0, 0])
+        elif self.model == "RADIAL":
+            f, cx, cy, k1, k2 = self.params
+            return np.array([k1, k2, 0, 0])
+        elif self.model == "OPENCV":
+            fx, fy, cx, cy, k1, k2, p1, p2 = self.params
+            return np.array([k1, k2, p1, p2])
+        elif self.model == "FULL_OPENCV":
+            fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, k5, k6 = self.params
+            return np.array([k1, k2, p1, p2, k3, k4, k5, k6])
+        elif self.model == "OPENCV_FISHEYE":
+            fx, fy, cx, cy, k1, k2, k3, k4 = self.params
+            return np.array([k1, k2, k3, k4])
+        elif self.model == "FOV":
+            fx, fy, cx, cy, omega = self.params
+            return np.array([omega, 0, 0, 0])
+        elif self.model == "SIMPLE_RADIAL_FISHEYE":
+            f, cx, cy, k1 = self.params
+            return np.array([k1, 0, 0, 0])
+        elif self.model == "RADIAL_FISHEYE":
+            f, cx, cy, k1, k2 = self.params
+            return np.array([k1, k2, 0, 0])
+        elif self.model == "THIN_PRISM_FISHEYE":
+            fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, sx1, sy1 = self.params
+            return np.array([k1, k2, p1, p2, k3, k4])
+        else:
+            raise NotImplementedError(
+                f"Distortion coefficients for {self.model} not implemented"
+            )
+
+    @property
     def intrinsics(self):
-        """Get intrinsics object with K matrix."""
+        """Get intrinsics object with K matrix and distortion coefficients."""
 
         class Intrinsics:
-            def __init__(self, K):
+            def __init__(self, K, dist_coeffs, camera_model):
                 self.K = K
+                self.D = dist_coeffs
+                self.camera_model = camera_model
 
-        return Intrinsics(self.K)
+        return Intrinsics(self.K, self.D, self.model)
 
 
 class Image(BaseImage):
@@ -132,17 +192,18 @@ class SfmProjectBase(ABC):
         progress_bar: bool = True,
         num_processes: int = None,
         use_multiprocessing: bool = True,
+        undistort_points: bool = True,
     ) -> Dict[int, Tuple[float, np.ndarray]]:
         """
         Detect ArUco markers in the project images for a single dictionary type.
 
         :param dict_type: ArUco dictionary type to use
-        :param detector: Pre-configured ArucoDetector (if None, will be created)
-        :param detector_params: Detector parameters (if detector not provided)
+        :param detector_params: Detector parameters (if None, will be created)
         :param progress_bar: Show progress bars
         :param num_processes: Number of processes for multiprocessing (None = auto)
         :param use_multiprocessing: Whether to use multiprocessing (can disable if issues occur)
-        :return: Dictionary mapping aruco_id -> (distance, corners_3d)
+        :param undistort_points: Whether to undistort detected marker corners using camera model
+        :return: Dictionary mapping aruco_id -> corners_3d
         """
 
         # Create detector if not provided
@@ -163,6 +224,7 @@ class SfmProjectBase(ABC):
             detector=detector,
             progress_bar=progress_bar,
             num_processes=num_processes,
+            undistort_points=undistort_points,
         )
 
         # Store results in project using Marker namedtuples
@@ -184,6 +246,7 @@ class SfmProjectBase(ABC):
         progress_bar: bool = True,
         min_detections: int = 3,
         ransac_config: Dict = None,
+        undistort_points: bool = True,
     ) -> Dict[int, Dict]:
         """
         Detect AprilTag markers in the project images.
@@ -192,6 +255,7 @@ class SfmProjectBase(ABC):
         :param progress_bar: Show progress bars
         :param min_detections: Minimum number of detections required per marker
         :param ransac_config: RANSAC configuration dict
+        :param undistort_points: Whether to undistort detected marker corners using camera model
         :return: Dictionary mapping apriltag_id -> marker_data
         """
         # Default RANSAC configuration
@@ -209,6 +273,7 @@ class SfmProjectBase(ABC):
             progress_bar=progress_bar,
             min_detections=min_detections,
             ransac_config=ransac_config,
+            undistort_points=undistort_points,
         )
 
         # Store results in project using Marker namedtuples

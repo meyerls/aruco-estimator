@@ -84,7 +84,7 @@ class VisualizationModel:
         default_config = {
             "scale": 1.0,
             "color": [0.8, 0.2, 0.8],
-            "show_images": True,
+            "show_images": False,
             "image_alpha": 0.6,
         }
         default_config.update(config)

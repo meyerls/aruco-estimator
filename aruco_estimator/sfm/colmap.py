@@ -112,9 +112,13 @@ class COLMAPProject(SfmProjectBase):
         if image_id not in self._images:
             raise ValueError(f"Image ID {image_id} not found in project")
 
-        image_path = os.path.join(self.images_path, self._images[image_id].name)
+        image_path = os.path.join(
+            self.images_path, self._images[image_id].name.replace(".MOV", ".png")
+        )
+
         if not os.path.exists(image_path):
-            raise FileNotFoundError(f"Image file not found: {image_path}")
+            return None
+            # raise FileNotFoundError(f"Image file not found: {image_path}")
 
         return cv2.imread(image_path)
 
